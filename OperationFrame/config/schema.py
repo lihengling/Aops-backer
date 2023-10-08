@@ -49,7 +49,6 @@ class FrameLoader(BaseModel):
     LOGS_SUMMARY_DIR:        Optional[str] = 'OperationLogs'           # 警告日志汇总存放目录
     LOGS_WORKER_DIR:         Optional[str] = 'OperationLogs'           # worker 任务日志过程存放目录
     WHITE_IPS:                        list = ['127.0.0.1']             # 请求白名单
-    WHITE_IPS_OPEN:                   bool = False                     # 是否启用ip白名单限制
     TASK_DEFAULT_WORKER:               str = 20                        # 并发任务默认并发数
     TASK_MAX_WORKER:                  list = []                        # 定义并发任务特定最大并发数列表
     WS_HEART_BEAT_TIME:                int = 10                        # ws 接口心跳频率检测时间

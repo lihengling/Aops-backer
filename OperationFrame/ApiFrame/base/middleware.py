@@ -54,6 +54,20 @@ class TraceMiddleware(BaseHTTPMiddleware):
 
 
 @add_wrapper
+class VerifyMiddleware(BaseHTTPMiddleware):
+    """ 校验方式：加密校验 """
+    app: ASGIApp
+    name: str = 'verify'
+    using: bool = config.VERIFY_TYPE_KEY
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        # print('sign', request.headers.get('sign', ''))
+        # print('time', request.headers.get('time', ''))
+        response: Response = await call_next(request)
+        return response
+
+
+@add_wrapper
 class RPCORHTTPMiddleware(BaseHTTPMiddleware):
     """ rpc or http """
     app: ASGIApp
@@ -68,7 +82,6 @@ class RPCORHTTPMiddleware(BaseHTTPMiddleware):
             response = await rpc._marshaled_dispatch(data, host=request.client.host)
             return Response(content=response, media_type="text/xml")
         else:
-            if config.WHITE_IPS_OPEN:
-                if request.client.host not in config.WHITE_IPS:
-                    raise ForbiddenError
+            if request.client.host not in config.WHITE_IPS:
+                raise ForbiddenError
             return await call_next(request)

@@ -51,7 +51,7 @@ def extend_property(bc: dict) -> dict:
 
 
 def get_models() -> tuple:
-    menu_models:     list = []
+    menu_models:     list = ["OperationFrame.models"]
     apps_models:     list = []
 
     platform_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))

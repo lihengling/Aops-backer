@@ -11,14 +11,13 @@ from typing import List
 
 from arq.constants import in_progress_key_prefix, default_queue_name, abort_jobs_ss
 from arq.jobs import JobDef
-from fastapi import WebSocket, Security
+from fastapi import WebSocket
 from starlette.websockets import WebSocketState
 from websockets.exceptions import ConnectionClosedOK
 
 from OperationFrame.ApiFrame.utils.arq.schema import JobStatus
 from OperationFrame.ApiFrame.base import router_system, NotFindError
 from OperationFrame.ApiFrame.utils.arq import Worker
-from OperationFrame.ApiFrame.utils.jwt import check_permissions
 from OperationFrame.config import config
 from OperationFrame.lib.depend import paginate_list_factory
 from OperationFrame.lib.tools import paginate_list, get_file
@@ -26,15 +25,13 @@ from OperationFrame.utils.models import BaseResponse
 from OperationFrame.utils.context import context
 
 
-@router_system.get("/worker/ping", summary="worker 是否正常", response_model=BaseResponse,
-                   dependencies=[Security(check_permissions, scopes=['worker_info'])])
+@router_system.get("/worker/ping", summary="worker 是否正常", response_model=BaseResponse)
 async def worker_ping():
     job = await context.pool.enqueue_job('ping_task', 'message')
     return BaseResponse(data=job.job_id)
 
 
-@router_system.post("/worker/abort", summary="worker 任务终止", response_model=BaseResponse,
-                   dependencies=[Security(check_permissions, scopes=['worker_manage'])])
+@router_system.post("/worker/abort", summary="worker 任务终止", response_model=BaseResponse)
 async def worker_abort(job_id: str):
     if await context.pool.exists(f"{in_progress_key_prefix}{job_id}"):
         await context.pool.zrem(default_queue_name, job_id)
@@ -45,8 +42,7 @@ async def worker_abort(job_id: str):
         raise NotFindError(message=f'{job_id} 已完成或不存在')
 
 
-@router_system.get("/worker", summary="worker 任务列表", response_model=BaseResponse[List[JobStatus]],
-                   dependencies=[Security(check_permissions, scopes=['worker_info'])])
+@router_system.get("/worker", summary="worker 任务列表", response_model=BaseResponse[List[JobStatus]])
 async def worker(pagination: dict = paginate_list_factory()):
     req: List[JobStatus] = []
     result_jobs = await context.pool.all_job_results()

@@ -10,7 +10,6 @@ JWT_TOKEN_MAX_AGE:           datetime = datetime.timedelta(days=30)
 JWT_SECRET_KEY:                   str = "09d25e094faa6ca2556c818166b7"
 JWT_ALGORITHM:                    str = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES:  int = 24 * 60
-JWT_TOKEN_TYPE:                   str = 'bearer'
 
 # 路由分类
 ROUTER_SORT_APP:                  str = 'app'
