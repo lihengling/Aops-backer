@@ -6,7 +6,6 @@ loguru==0.6.0
 tortoise-orm[asyncmy]==0.19.2
 aerich==0.6.3
 uvicorn[standard]==0.18.2
-asyncssh==2.11.0
 aiomysql==0.1.1
 fastapi==0.79.0
 bcrypt==4.0.1
