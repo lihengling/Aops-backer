@@ -11,6 +11,6 @@ CBV_MODELS = {
     # 业务 模型
     ROUTER_SORT_DEFAULT: [],
     # 用户、角色 模型
-    ROUTER_SORT_APP: []
+    ROUTER_SORT_APP: [User]
     # ROUTER_SORT_APP: [User, Role, Permission]
 }

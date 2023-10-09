@@ -56,11 +56,15 @@ class User(IDModel):
         return permissions
 
     class AutoModeMeta:
-        exclude = ["password"]
+        exclude = ['password']
+
+    class PydanticMeta:
+        exclude = ['password']
 
     class Meta:
         table = 'users'
         table_description = '用户表'
+        query_fields = ['username', 'created_at', 'updated_at']
 
 
 class Permission(IDModel):

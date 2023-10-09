@@ -8,4 +8,4 @@ from .middleware import Middleware
 from .router import Routers
 from .router import router_index, router_user, router_game, router_system
 from .exceptions import exception_handler, NotFindError
-from .constant import ROUTER_SORT_APP, ROUTER_SORT_DEFAULT, ROUTER_START_SWITCH
+from .constant import *

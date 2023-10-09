@@ -10,6 +10,8 @@ from OperationFrame.ApiFrame.apps.auth.models import User, Role
 from OperationFrame.ApiFrame.apps.auth.schema import UserResponse, UserRequest, get_user_response
 from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant
 from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError
+from OperationFrame.config import config
+from OperationFrame.config.constant import ENV_DEV
 from OperationFrame.utils.models import BaseResponse
 from OperationFrame.ApiFrame.utils.jwt import create_token
 
@@ -46,14 +48,13 @@ async def login(data: UserRequest) -> ORJSONResponse:
     rsp.set_cookie('username', user.username, expires=constant.JWT_TOKEN_MAX_AGE.total_seconds())
     return rsp
 
+if config.ENV == ENV_DEV:
+    @router_user.post("/token", summary="docs 获取 token，仅用于开发环境测试")
+    async def login_oauth(data: OAuth2PasswordRequestForm = Depends()):
+        user = await User.filter(username=data.username).first()
+        jwt_token = create_token(data={
+            "username": user.username,
+            "password": user.get_password(data.password)
+        })
 
-@router_user.post("/token",
-                  summary="docs 获取 token，仅用于测试")
-async def login_oauth(data: OAuth2PasswordRequestForm = Depends()):
-    user = await User.filter(username=data.username).first()
-    jwt_token = create_token(data={
-        "username": user.username,
-        "password": user.get_password(data.password)
-    })
-
-    return {'access_token': jwt_token, 'token_type': constant.JWT_TOKEN_TYPE}
+        return {'access_token': jwt_token, 'token_type': constant.JWT_TOKEN_TYPE}

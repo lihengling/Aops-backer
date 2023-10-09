@@ -7,26 +7,30 @@ from functools import reduce
 from operator import or_
 from typing import cast, Type, List, Union
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Security
 from tortoise.expressions import Q
 from tortoise.models import Model
 from tortoise.contrib.pydantic import pydantic_model_creator
 from fastapi_crudrouter import TortoiseCRUDRouter
 from fastapi_crudrouter.core._utils import pagination_factory
 
-from OperationFrame.ApiFrame.base import ROUTER_START_SWITCH, NotFindError
+from OperationFrame.ApiFrame.base import ROUTER_START_SWITCH, QUERY_FIELDS, PERMISSION_INFO, PERMISSION_DELETE, \
+                                         PERMISSION_UPDATE, NotFindError
+from OperationFrame.ApiFrame.utils.jwt import check_permissions
 from OperationFrame.utils.models import BaseResponse
 
-_pagination_factory = pagination_factory()
+_pagination = pagination_factory()
 
 
 def get_cbv_exp(model: Type[Model], query) -> list:
-    if hasattr(model.Meta, 'query_fields'):
-        query_fields: Union[set, list] = getattr(model.Meta, 'query_fields')
+    if hasattr(model.Meta, QUERY_FIELDS):
+        query_fields: Union[set, list] = getattr(model.Meta, QUERY_FIELDS)
         query_fields = set(query_fields).intersection(model._meta.fields)
     else:
         query_fields = model._meta.fields
-    return [Q(**{f"{x}__icontains": query}) for x in query_fields if not x.startswith('_')]
+
+    return [Q(**{f"{x}__icontains": query}) for x in query_fields
+            if not x.startswith('_') and x not in model._meta.fetch_fields]
 
 
 def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoint: bool = True) -> APIRouter:
@@ -39,8 +43,9 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
         tags=[tortoise_model.__name__],
     )
 
-    @router.get('', summary=f"获取 {model_name} 模型列表", response_model=BaseResponse[List[schema]])
-    async def overloaded_get_all(pagination: dict = _pagination_factory, query: Union[str, int] = None):
+    @router.get('', summary=f"CBV 获取 {model_name} 模型列表", response_model=BaseResponse[List[schema]],
+                dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_INFO}'])])
+    async def overloaded_get_all(pagination: dict = _pagination, query: Union[str, int] = None):
         skip, limit = pagination.get("skip", 0), pagination.get("limit", None)
         if query is not None:
             _query_model = router.db_model.filter(reduce(or_, get_cbv_exp(router.db_model, query)))
@@ -52,13 +57,15 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
         _req = await req
         return BaseResponse(data=_req)
 
-    @router.delete('', summary=f"删除 {model_name} 模型列表", response_model=BaseResponse[List[schema]])
+    @router.delete('', summary=f"CBV 删除 {model_name} 模型列表", response_model=BaseResponse[List[schema]],
+                dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_DELETE}'])])
     async def overloaded_delete_all():
         req = await router._get_all()(pagination={"skip": 0, "limit": None})
         await router.db_model.all().delete()
         return BaseResponse(data=req)
 
-    @router.post('', summary=f"创建 {model_name} 模型资源", response_model=BaseResponse[schema])
+    @router.post('', summary=f"CBV 创建 {model_name} 模型资源", response_model=BaseResponse[schema],
+                dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_UPDATE}'])])
     async def overloaded_create(model: Union[router.create_schema, dict]):
         if isinstance(model, dict):
             req = router.db_model(**model)
@@ -67,7 +74,8 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
         await req.save()
         return BaseResponse(data=req)
 
-    @router.get('/{item_id}', summary=f"获取 {model_name} 模型单个资源", response_model=BaseResponse[schema])
+    @router.get('/{item_id}', summary=f"CBV 获取 {model_name} 模型单个资源", response_model=BaseResponse[schema],
+                dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_INFO}'])])
     async def overloaded_get_one(item_id: int):
         req = await router.db_model.filter(id=item_id).first()
         if req:
@@ -75,7 +83,8 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
         else:
             raise NotFindError
 
-    @router.put('/{item_id}', summary=f"更新 {model_name} 模型单个资源", response_model=BaseResponse[schema])
+    @router.put('/{item_id}', summary=f"CBV 更新 {model_name} 模型单个资源", response_model=BaseResponse[schema],
+                dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_UPDATE}'])])
     async def overloaded_update(item_id: int, model: Union[router.create_schema, dict]):
         if not isinstance(model, dict):
             model = model.dict(exclude_unset=True)
@@ -84,7 +93,8 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
         req: Model = await router._get_one()(item_id)
         return BaseResponse(data=req)
 
-    @router.delete('/{item_id}', summary=f"删除 {model_name} 模型单个资源", response_model=BaseResponse[schema])
+    @router.delete('/{item_id}', summary=f"CBV 删除 {model_name} 模型单个资源", response_model=BaseResponse[schema],
+                dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_DELETE}'])])
     async def overloaded_delete_one(item_id: int):
         req = await router.db_model.filter(id=item_id).first()
         if not req:
