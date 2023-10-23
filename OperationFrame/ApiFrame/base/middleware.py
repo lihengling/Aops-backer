@@ -11,8 +11,9 @@ from starlette.responses import Response
 from starlette.types import ASGIApp
 from werkzeug import Request
 
-from OperationFrame.ApiFrame.base.exceptions import ForbiddenError
+from OperationFrame.ApiFrame.base.exceptions import BadRequestError
 from OperationFrame.config import config
+from OperationFrame.config.constant import SERVER_TAG_HTTP
 from OperationFrame.utils.log import logger
 from OperationFrame.ApiFrame.utils.rpc import rpc
 from OperationFrame.ApiFrame.utils.rpc.constant import RPC_DOCS_URL, RPC_START_SWITCH
@@ -31,9 +32,10 @@ def add_wrapper(cls):
 
 @add_wrapper
 class TraceMiddleware(BaseHTTPMiddleware):
-    """ 添加回溯信息 """
-    app: ASGIApp
-    name: str = 'trace'
+    """ http: 添加回溯信息 """
+    app:    ASGIApp
+    name:       str = 'trace'
+    using:     bool = config.SERVER_TYPE == SERVER_TAG_HTTP
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         before = time()
@@ -54,11 +56,23 @@ class TraceMiddleware(BaseHTTPMiddleware):
 
 
 @add_wrapper
-class RPCORHTTPMiddleware(BaseHTTPMiddleware):
-    """ rpc or http """
+class WhiteListMiddleware(BaseHTTPMiddleware):
+    """ rpc or http: 流量白名单限制 """
     app: ASGIApp
-    name: str = 'RoP'
-    using: bool = config.SERVER_RPC_ALLOW
+    name:    str = 'White List'
+    using:  bool = config.WHITE_IPS_OPEN
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if request.client.host not in config.WHITE_IPS:
+            raise BadRequestError(message='ip 禁止访问')
+        return await call_next(request)
+
+
+@add_wrapper
+class RPCORHTTPMiddleware(BaseHTTPMiddleware):
+    """ rpc or http 路由转向 """
+    app: ASGIApp
+    name:    str = 'RoP'
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.url.path.startswith(RPC_START_SWITCH):
@@ -68,7 +82,4 @@ class RPCORHTTPMiddleware(BaseHTTPMiddleware):
             response = await rpc._marshaled_dispatch(data, host=request.client.host)
             return Response(content=response, media_type="text/xml")
         else:
-            if config.WHITE_IPS_OPEN:
-                if request.client.host not in config.WHITE_IPS:
-                    raise ForbiddenError
             return await call_next(request)

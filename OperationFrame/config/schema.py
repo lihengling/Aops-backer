@@ -6,6 +6,7 @@ Date: 2023/03/21
 from pydantic import RedisDsn
 from typing import Optional
 
+from OperationFrame.config.constant import SERVER_TAG_HTTP
 from OperationFrame.utils.models import BaseModel
 
 
@@ -35,12 +36,10 @@ class FrameLoader(BaseModel):
     SERVER_DEBUG:                     bool = False                     # 服务端是否debug模式
     SERVER_RELOAD:                    bool = False                     # 服务端是否重载模式
     SERVER_WORKER:                     int = 1                         # 服务端进程数
-    SERVER_API_ALLOW:                 bool = False                     # 服务端 api 模式(提供http请求)
-    SERVER_RPC_ALLOW:                 bool = False                     # 服务端 rpc 模式(提供rpc请求)
     SERVER_MOUNTED:                   bool = False                     # 服务端 是否挂载
+    SERVER_TYPE:                       str = SERVER_TAG_HTTP           # 服务端 类型：http/rpc 其中之一
     WORKER_MAX_JOBS:                   int = 15                        # 异步任务最大并发数
     WORKER_DSN:         Optional[RedisDsn]                             # 异步任务连接
-    VERIFY_TYPE_KEY:                  bool = False                     # 是否启动校验头中间件
     VERIFY_TYPE_AUTH:                 bool = False                     # 是否启动角色验证(这将注册额外的表)
     MYSQL_TORTOISE_ORM:     Optional[dict]                             # tortoise 引擎
     LOGS_DIR_NAME:                     str = 'OperationLogs'           # 日志存放目录名称
@@ -48,8 +47,8 @@ class FrameLoader(BaseModel):
     LOGS_MULTI_DIR:          Optional[str] = 'OperationLogs'           # 并发任务日志存放目录
     LOGS_SUMMARY_DIR:        Optional[str] = 'OperationLogs'           # 警告日志汇总存放目录
     LOGS_WORKER_DIR:         Optional[str] = 'OperationLogs'           # worker 任务日志过程存放目录
-    WHITE_IPS:                        list = ['127.0.0.1']             # 请求白名单
     WHITE_IPS_OPEN:                   bool = False                     # 是否启用ip白名单限制
+    WHITE_IPS:                        list = ['127.0.0.1']             # 请求白名单
     TASK_DEFAULT_WORKER:               str = 20                        # 并发任务默认并发数
     TASK_MAX_WORKER:                  list = []                        # 定义并发任务特定最大并发数列表
     WS_HEART_BEAT_TIME:                int = 10                        # ws 接口心跳频率检测时间

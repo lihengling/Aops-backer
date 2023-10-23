@@ -15,7 +15,7 @@ from OperationFrame.ApiFrame.apps import CBV_MODELS
 from OperationFrame.ApiFrame.utils.arq import Worker
 from OperationFrame.ApiFrame.utils.cbv import get_cbv_router
 from OperationFrame.config import config
-from OperationFrame.config.constant import CACHES_CONFIG_KEY
+from OperationFrame.config.constant import CACHES_CONFIG_KEY, SERVER_TAG_HTTP, SERVER_TAG_RPC
 from OperationFrame.utils.cbvmenu import TAG_SAW, menu, TYPE_WORKER
 from OperationFrame.utils.context import context
 from OperationFrame.utils.log import logger
@@ -53,21 +53,24 @@ Worker.tasks_list = {f'Worker_{task.sign}': (task.self, task.name) for tasks in 
                      for task in tasks if task.route and TYPE_WORKER in task.route.tags}
 
 # 载入路由
-if config.SERVER_API_ALLOW:
+if config.SERVER_TYPE == SERVER_TAG_HTTP:
     for route in Routers:
-        if not config.VERIFY_TYPE_AUTH and route.sort == ROUTER_SORT_APP: continue
+        if not config.VERIFY_TYPE_AUTH and route.sort == ROUTER_SORT_APP:
+            continue
         app.include_router(route)
         logger.debug(f"include router: {route.sort} => {route.prefix}")
 
 # 载入 cbv 路由
 for sort, models in CBV_MODELS.items():
     for model in models:
-        if not config.VERIFY_TYPE_AUTH and sort == ROUTER_SORT_APP: continue
-        route = get_cbv_router(model, sort)
-        Routers.append(route)
-        if not config.SERVER_API_ALLOW: continue
-        app.include_router(route)
-        logger.debug(f"include cbv: {sort} => {route.prefix}")
+        if not config.VERIFY_TYPE_AUTH and sort == ROUTER_SORT_APP:
+            continue
+        router = get_cbv_router(model, sort)
+        Routers.append(router)
+        if config.SERVER_TYPE != SERVER_TAG_HTTP:
+            continue
+        app.include_router(router)
+        logger.debug(f"include cbv: {sort} => {router.prefix}")
 
 # 载入中间件
 for name, middleware in Middleware[::-1]:
@@ -81,7 +84,7 @@ for e in EXCEPTION_LOG_HANDLER:
     logger.debug(f"add exception handler {e.__module__}.{e.__name__}")
 
 # 载入 rpc
-if config.SERVER_RPC_ALLOW:
+if config.SERVER_TYPE == SERVER_TAG_RPC:
     for router in Routers:
         if not config.VERIFY_TYPE_AUTH and router.sort == ROUTER_SORT_APP: continue
         for route in router.routes:
@@ -92,9 +95,10 @@ if config.SERVER_RPC_ALLOW:
 # 接口文档
 if config.SERVER_DEBUG:
     server = f"http://{config.SERVER_HOST}:{config.SERVER_PORT}"
-    if config.SERVER_RPC_ALLOW:
-        logger.debug(f"RPC DOCS {server}{RPC_DOCS_URL}")
-    logger.debug(f"API DOCS {server}{app.docs_url} / {server}{app.redoc_url}")
+    if config.SERVER_TYPE == SERVER_TAG_RPC:
+        logger.debug(f"rpc docs: {server}{RPC_DOCS_URL}")
+    else:
+        logger.debug(f"api docs: {server}{app.docs_url} / {server}{app.redoc_url}")
 
 
 # 载入启动事件
@@ -105,8 +109,7 @@ async def init_tortoise():
         modules={'models': config.MYSQL_REGISTER_MODEL}
     )
     logger.debug(f'{TAG_SAW} init tortoise: {Tortoise._inited}')
-    logger.debug(f"RPC inited {config.SERVER_RPC_ALLOW}")
-    logger.debug(f"API inited {config.SERVER_API_ALLOW}")
+    logger.debug(f"Server type: {config.SERVER_TYPE}")
 
 
 @app.on_event("startup")
