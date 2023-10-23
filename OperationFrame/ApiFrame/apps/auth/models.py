@@ -65,6 +65,7 @@ class User(IDModel):
         table = 'users'
         table_description = '用户表'
         query_fields = ['username', 'created_at', 'updated_at']
+        route_registry = ['get_all', 'get_one', 'create_one', 'update_one', 'delete_one']
 
 
 class Permission(IDModel):

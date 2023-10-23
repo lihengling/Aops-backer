@@ -21,6 +21,3 @@ ROUTER_START_SWITCH:              str = '/api'
 PERMISSION_INFO:                 str = 'info'
 PERMISSION_UPDATE:               str = 'update'
 PERMISSION_DELETE:               str = 'delete'
-
-# 模糊匹配字段(以列表形式定义在 Meta 中)
-QUERY_FIELDS:                    str = 'query_fields'
