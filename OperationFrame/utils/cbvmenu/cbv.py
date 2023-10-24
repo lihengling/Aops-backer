@@ -35,7 +35,7 @@ class __CbvMixin(SchedulerTasks):
         if _log is True:
             milliseconds = int(round(time.time() * 1000))
             logger_id = logger.add_worker_file(f"{config.LOGS_WORKER_DIR}/{milliseconds}%{self.Meta.sign}"
-                                               + "-{time:YYYY-MM-DD-HH:mm:ss}.log")
+                                               + "-{time:YYYY-MM-DD-HH#mm#ss}.log")
             try:
                 context.log_id = logger_id
                 req = await self.__run(*args, **kwargs)

@@ -93,7 +93,7 @@ class Worker(BaseWorker):
             milliseconds = int(round(time.time() * 1000))
             ctx['job_logger_id'] = logger.add_worker_file(
                 f"{config.LOGS_WORKER_DIR}/{milliseconds}%{ctx['job_id']}%{ctx['job_name']}" +
-                "-{time:YYYY-MM-DD-HH:mm:ss}.log", ctx['job_id']
+                "-{time:YYYY-MM-DD-HH#mm#ss}.log", ctx['job_id']
             )
             ctx['job_start_time'] = real_time()
 

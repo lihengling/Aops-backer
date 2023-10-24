@@ -36,7 +36,7 @@ class ToolConfigCheck(CommonCbv):
 
     async def run(self):
         # python 3.10+
-        logger.info('开始检测 python 运行版本...')
+        logger.info(f'开始检测 python 运行版本... ({self.check_python})')
         req = await cmd_result(self.check_python)
         req = str(req).strip()
         if req:
@@ -52,7 +52,7 @@ class ToolConfigCheck(CommonCbv):
 
         # 检测pip依赖包
         req = await cmd_result(self.check_pip)
-        logger.info(f'开始检测 pip 依赖包环境...\n{str(req).strip()}')
+        logger.info(f'开始检测 pip 依赖包环境... ({self.check_pip})\n{str(req).strip()}')
 
         # 检测数据库连接是否正常
         logger.info('开始检测 数据库 连接状态...')
