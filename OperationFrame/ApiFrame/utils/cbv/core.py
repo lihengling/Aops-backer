@@ -12,14 +12,12 @@ from tortoise.expressions import Q
 from tortoise.models import Model
 from tortoise.contrib.pydantic import pydantic_model_creator
 from fastapi_crudrouter import TortoiseCRUDRouter
-from fastapi_crudrouter.core._utils import pagination_factory
 
 from OperationFrame.ApiFrame.base import ROUTER_START_SWITCH, PERMISSION_INFO, PERMISSION_DELETE, PERMISSION_UPDATE, \
     NotFindError
 from OperationFrame.ApiFrame.utils.jwt import check_permissions
+from OperationFrame.lib.depend import paginate_factory
 from OperationFrame.utils.models import BaseResponse
-
-_pagination = pagination_factory()
 
 
 # 数据库模型：模糊匹配字段           (以列表形式定义在 Meta 中)
@@ -61,7 +59,7 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
     if 'get_all' in route_registry:
         @router.get('', summary=f"CBV 获取 {model_name} 模型列表", response_model=BaseResponse[List[schema]],
                     dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_INFO}'])])
-        async def overloaded_get_all(pagination: dict = _pagination, query: Union[str, int] = None):
+        async def overloaded_get_all(pagination: dict = paginate_factory(), query: Union[str, int] = None):
             skip, limit = pagination.get("skip", 0), pagination.get("limit", None)
             if query is not None:
                 _query_model = router.db_model.filter(reduce(or_, get_cbv_exp(router.db_model, query)))

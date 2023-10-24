@@ -14,11 +14,15 @@ from fastapi.security import OAuth2PasswordBearer as BaseOAuth2PasswordBearer, \
 from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire
 
 
+AUTH_HEADER = 'Authorization'
+AUTH_SCHEME = 'bearer'
+
+
 class OAuth2Bearer(OAuth2):
     async def __call__(self, request: Request) -> Optional[str]:
-        authorization: str = request.headers.get("Authorization")
+        authorization: str = request.headers.get(AUTH_HEADER)
         scheme, param = get_authorization_scheme_param(authorization)
-        if not authorization or scheme.lower() != "bearer":
+        if not authorization or scheme.lower() != AUTH_SCHEME:
             if self.auto_error:
                 raise AccessTokenExpire
             else:
