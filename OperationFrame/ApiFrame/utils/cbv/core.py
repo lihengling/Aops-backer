@@ -58,7 +58,7 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
 
     if 'get_all' in route_registry:
         @router.get('', summary=f"CBV 获取 {model_name} 模型列表", response_model=BaseResponse[List[schema]],
-                    dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_INFO}'])])
+                    dependencies=[Security(check_permissions, scopes=[f'{model_name}_{PERMISSION_INFO}'])])
         async def overloaded_get_all(pagination: dict = paginate_factory(), query: Union[str, int] = None):
             skip, limit = pagination.get("skip", 0), pagination.get("limit", None)
             if query is not None:
@@ -73,7 +73,7 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
 
     if 'delete_all' in route_registry:
         @router.delete('', summary=f"CBV 删除 {model_name} 模型列表", response_model=BaseResponse[List[schema]],
-                    dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_DELETE}'])])
+                    dependencies=[Security(check_permissions, scopes=[f'{model_name}_{PERMISSION_DELETE}'])])
         async def overloaded_delete_all():
             req = await router._get_all()(pagination={"skip": 0, "limit": None})
             await router.db_model.all().delete()
@@ -81,7 +81,7 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
 
     if 'create_one' in route_registry:
         @router.post('', summary=f"CBV 创建 {model_name} 模型资源", response_model=BaseResponse[schema],
-                    dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_UPDATE}'])])
+                    dependencies=[Security(check_permissions, scopes=[f'{model_name}_{PERMISSION_UPDATE}'])])
         async def overloaded_create(model: Union[router.create_schema, dict]):
             if isinstance(model, dict):
                 req = router.db_model(**model)
@@ -92,7 +92,7 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
 
     if 'get_one' in route_registry:
         @router.get('/{item_id}', summary=f"CBV 获取 {model_name} 模型单个资源", response_model=BaseResponse[schema],
-                    dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_INFO}'])])
+                    dependencies=[Security(check_permissions, scopes=[f'{model_name}_{PERMISSION_INFO}'])])
         async def overloaded_get_one(item_id: int):
             req = await router.db_model.filter(id=item_id).first()
             if req:
@@ -102,7 +102,7 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
 
     if 'update_one' in route_registry:
         @router.put('/{item_id}', summary=f"CBV 更新 {model_name} 模型单个资源", response_model=BaseResponse[schema],
-                    dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_UPDATE}'])])
+                    dependencies=[Security(check_permissions, scopes=[f'{model_name}_{PERMISSION_UPDATE}'])])
         async def overloaded_update(item_id: int, model: Union[router.create_schema, dict]):
             if not isinstance(model, dict):
                 model = model.dict(exclude_unset=True)
@@ -113,7 +113,7 @@ def get_cbv_router(tortoise_model: Type[Model], sort: str = None, make_rpcEndpoi
 
     if 'delete_one' in route_registry:
         @router.delete('/{item_id}', summary=f"CBV 删除 {model_name} 模型单个资源", response_model=BaseResponse[schema],
-                    dependencies=[Security(check_permissions, scopes=[f'CBV_{model_name}_{PERMISSION_DELETE}'])])
+                    dependencies=[Security(check_permissions, scopes=[f'{model_name}_{PERMISSION_DELETE}'])])
         async def overloaded_delete_one(item_id: int):
             req = await router.db_model.filter(id=item_id).first()
             if not req:

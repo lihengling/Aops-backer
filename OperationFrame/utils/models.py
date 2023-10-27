@@ -26,5 +26,9 @@ class BaseResponse(GenericModel, typing.Generic[DataT]):
     data: typing.Optional[DataT] = None
 
 
+class BaseResponseList(BaseResponse, GenericModel, typing.Generic[DataT]):
+    total: int
+
+
 class JobResponse(BaseModel):
     job_id: str

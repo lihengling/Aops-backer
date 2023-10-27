@@ -30,6 +30,9 @@ class User(IDModel):
     role: fields.ManyToManyRelation['Role'] = \
         fields.ManyToManyField('models.Role', related_name='user', description='用户角色', on_delete=fields.CASCADE)
     is_active = fields.BooleanField(default=True, description='用户状态(False:禁用,True:启用)')
+    department = fields.ForeignKeyField('models.Department', related_name='users', description='用户部门外键', null=True)
+    menus: fields.ManyToManyRelation['Menu'] = \
+        fields.ManyToManyField('models.Menu', related_name='users', description='用户菜单', through='user_menus')
 
     @classmethod
     def get_password(cls, password):
@@ -55,6 +58,11 @@ class User(IDModel):
                 permissions.add(permission.permission_name)
         return permissions
 
+    @async_property
+    async def department_name(self) -> str:
+        dep = await self.department
+        return dep.department_name if dep else ''
+
     class AutoModeMeta:
         exclude = ['password']
 
@@ -78,3 +86,21 @@ class Permission(IDModel):
     class Meta:
         table = 'permissions'
         table_description = '权限表'
+
+
+class Department(IDModel):
+    department_name = fields.CharField(max_length=30, description='部门名称')
+    parent = fields.ForeignKeyField('models.Department', related_name='children', description='父部门关系外键', null=True)
+
+    class Meta:
+        table = 'department'
+        table_description = '部门表'
+
+
+class Menu(IDModel):
+    menu_name = fields.CharField(max_length=30, description='菜单名称')
+    url = fields.CharField(max_length=255, description='菜单链接')
+
+    class Meta:
+        table = 'menu'
+        table_description = '菜单表'
