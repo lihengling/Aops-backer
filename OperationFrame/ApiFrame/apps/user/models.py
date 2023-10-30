@@ -32,7 +32,8 @@ class User(IDModel):
     is_active = fields.BooleanField(default=True, description='用户状态(False:禁用,True:启用)')
     department = fields.ForeignKeyField('models.Department', related_name='users', description='用户部门外键', null=True)
     menus: fields.ManyToManyRelation['Menu'] = \
-        fields.ManyToManyField('models.Menu', related_name='users', description='用户菜单', through='user_menus')
+        fields.ManyToManyField('models.Menu', related_name='users', description='用户菜单', through='user_menus',
+                               on_delete=fields.CASCADE)
 
     @classmethod
     def get_password(cls, password):

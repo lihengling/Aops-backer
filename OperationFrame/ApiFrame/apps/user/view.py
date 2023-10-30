@@ -10,10 +10,10 @@ from fastapi import Depends
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
 from OperationFrame.ApiFrame.apps.user.models import User, Role
-from OperationFrame.ApiFrame.apps.user.schema import UserResponse, UserRequest, get_user_response, UserResponseList, \
-    UserResponseInfo
+from OperationFrame.ApiFrame.apps.user.schema import UserResponse, UserAuthRequest, get_user_response, UserResponseList, \
+    UserResponseInfo, UserUpdateRequest
 from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant
-from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, NotFindError
+from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, NotFindError, ForbiddenError
 from OperationFrame.ApiFrame.utils.cbv.core import get_cbv_exp
 from OperationFrame.config import config
 from OperationFrame.config.constant import ENV_DEV
@@ -40,7 +40,7 @@ if config.ENV == ENV_DEV:
 @router_user.post("/register",
                   summary="用户注册",
                   response_model=BaseResponse[UserResponse])
-async def register(data: UserRequest) -> ORJSONResponse:
+async def register(data: UserAuthRequest) -> ORJSONResponse:
     if await User.filter(username=data.username).exists():
         raise BadRequestError(message=f'user {data.username} is exists')
 
@@ -55,8 +55,8 @@ async def register(data: UserRequest) -> ORJSONResponse:
 @router_user.post("/login",
                   summary="用户登录",
                   response_model=BaseResponse[UserResponse])
-async def login(data: UserRequest) -> ORJSONResponse:
-    user = await User.filter(username=data.username).first()
+async def login(data: UserAuthRequest) -> ORJSONResponse:
+    user = await User.get_or_none(username=data.username)
     if not user or not user.check_password(data.password) and user.is_active:
         raise AccessTokenExpire()
 
@@ -78,32 +78,56 @@ async def user_list(pagination: dict = paginate_factory(), query: Union[str, int
     if limit:
         req = req.limit(limit)
 
-    data = []
-    for res in await req:
-        data.append(dict(username=res.username, is_admin=await res.is_admin, is_active=res.is_active,
-                         department=await res.department_name))
+    data = [dict(id=x.id, username=x.username, is_admin=await x.is_admin, is_active=x.is_active,
+                 department=await x.department_name) for x in await req]
 
     return BaseResponseList(data=data, total=await User.filter().count())
 
 
-@router_user.get('/{item_id}', summary='获取用户详细信息', response_model=BaseResponse[UserResponseInfo])
+@router_user.get('/{item_id}', summary='获取用户信息', response_model=BaseResponse[UserResponseInfo])
 async def user_info(item_id: int):
-    res = await User.filter(id=item_id).first()
-    if res:
-        return BaseResponse(data=dict(is_admin=await res.is_admin, department=await res.department_name,
-                            username=res.username, is_active=res.is_active))
+    user = await User.get_or_none(id=item_id)
+    if user:
+        roles = {x.role_name for x in await user.role}
+        menus = {x.menu_name for x in await user.menus}
+        return BaseResponse(data=dict(id=user.id, is_admin=await user.is_admin, department=await user.department_name,
+                            username=user.username, is_active=user.is_active, roles=roles, menus=menus))
     else:
         raise NotFindError
 
 
-async def user_create():
-    pass
+@router_user.delete('/{item_id}', summary='删除用户', response_model=BaseResponse[UserResponse])
+async def user_delete(item_id: int):
+    user = await User.get_or_none(id=item_id)
+    if not user:
+        raise NotFindError
+
+    if await user.is_admin:
+        raise ForbiddenError(message='管理员用户不可删除')
+    else:
+        await user.delete()
+        return BaseResponse(data=UserResponse(username=user.username))
 
 
-async def user_delete():
-    pass
+@router_user.put('/{item_id}', summary='修改用户信息')
+# @router_user.put('/{item_id}', summary='修改用户信息', response_model=BaseResponse[UserResponse])
+async def user_update(item_id: int, user_schema: Union[UserUpdateRequest, dict]):
+    if not isinstance(user_schema, dict):
+        user_dict = user_schema.dict(exclude_unset=True)
+    else:
+        user_dict = user_schema
 
+    print(user_dict)
+    roles = user_dict.pop('role_id')
+    menus = user_dict.pop('menu_id')
 
-async def user_update():
-    pass
+    user = await User.get_or_none(id=item_id)
+    if not user:
+        raise NotFindError
 
+    # 更新本表
+    await user.update_from_dict(user_dict)
+
+    # 更新多对多外部表
+
+    return BaseResponse(data=[])
