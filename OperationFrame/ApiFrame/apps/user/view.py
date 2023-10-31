@@ -9,11 +9,12 @@ from operator import or_
 from fastapi import Depends
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
-from OperationFrame.ApiFrame.apps.user.models import User, Role
+from OperationFrame.ApiFrame.apps.user.models import User, Role, Menu, Department
 from OperationFrame.ApiFrame.apps.user.schema import UserResponse, UserAuthRequest, get_user_response, UserResponseList, \
     UserResponseInfo, UserUpdateRequest
 from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant
-from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, NotFindError, ForbiddenError
+from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, NotFindError, ForbiddenError, \
+    BaseValueError
 from OperationFrame.ApiFrame.utils.cbv.core import get_cbv_exp
 from OperationFrame.config import config
 from OperationFrame.config.constant import ENV_DEV
@@ -88,9 +89,11 @@ async def user_list(pagination: dict = paginate_factory(), query: Union[str, int
 async def user_info(item_id: int):
     user = await User.get_or_none(id=item_id)
     if user:
-        roles = {x.role_name for x in await user.role}
-        menus = {x.menu_name for x in await user.menus}
-        return BaseResponse(data=dict(id=user.id, is_admin=await user.is_admin, department=await user.department_name,
+        roles = [{'id': role.id, 'role_name': role.role_name, 'description': role.description} for role in await user.role]
+        menus = [{'id': menu.id, 'menu_name': menu.menu_name, 'url': menu.url} for menu in await user.menus]
+        dep = await user.department
+        department = {'id': dep.id, 'department_name': dep.department_name} if dep else {}
+        return BaseResponse(data=dict(id=user.id, is_admin=await user.is_admin, department=department,
                             username=user.username, is_active=user.is_active, roles=roles, menus=menus))
     else:
         raise NotFindError
@@ -117,17 +120,36 @@ async def user_update(item_id: int, user_schema: Union[UserUpdateRequest, dict])
     else:
         user_dict = user_schema
 
-    print(user_dict)
-    roles = user_dict.pop('role_id')
-    menus = user_dict.pop('menu_id')
+    roles:        list = user_dict.pop('role_id')
+    menus:        list = user_dict.pop('menu_id')
+    department_id: int = user_dict.pop('department_id')
 
     user = await User.get_or_none(id=item_id)
     if not user:
         raise NotFindError
 
+    # 更新用户部门
+    department_obj = await Department.get_or_none(id=department_id)
+    if not department_obj:
+        raise BaseValueError(message=f'部门id: {department_id} 不存在')
+    user.department = department_obj
+
     # 更新本表
     await user.update_from_dict(user_dict)
 
-    # 更新多对多外部表
+    # 更新用户角色
+    await user.role.clear()
+    role_objs = [x for x in await Role.filter(id__in=roles).all()]
+    for role_obj in role_objs:
+        await user.role.add(role_obj)
+
+    # 更新用户菜单
+    await user.menus.clear()
+    menu_objs = [x for x in await Menu.filter(id__in=menus).all()]
+    for menu_obj in menu_objs:
+        await user.menus.add(menu_obj)
+
+    # 保存信息
+    await user.save()
 
     return BaseResponse(data=[])

@@ -21,33 +21,40 @@ async def get_user_response(user: User, token: str = None) -> ORJSONResponse:
         )))
 
 
+# 响应: 用户基础字段
 class UserBase(BaseModel):
     username:   str
     is_active: bool
 
 
+# 请求: 用户登录注册请求
 class UserAuthRequest(BaseModel):
     username: str
     password: str
 
 
+# 请求: 用户修改信息
 class UserUpdateRequest(UserBase):
-    role_id:    List[int] = []
-    menu_id:    List[int] = []
-    department: int
+    role_id:       List[int] = []
+    menu_id:       List[int] = []
+    department_id: int
 
 
+# 响应: 用户列表
 class UserResponseList(UserBase):
     id:         int
     is_admin:  bool
     department: str
 
 
+# 响应: 用户信息
 class UserResponseInfo(UserResponseList):
-    roles: set = set()
-    menus: set = set()
+    roles: List[dict] = []
+    menus: List[dict] = []
+    department:  dict
 
 
+# 响应: 用户token信息
 class UserResponse(UserBase):
     is_admin:  bool = False
     permission: set = set()
