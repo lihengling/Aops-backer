@@ -81,7 +81,6 @@ class Permission(IDModel):
     role: fields.ManyToManyRelation['Role']
     permission_name = fields.CharField(max_length=30, description='权限名称')
     description = fields.TextField(null=True, description='权限描述')
-    parent_id = fields.IntField(default=0, description='父id')
     is_active = fields.BooleanField(default=True, description='权限状态(False:禁用,True:启用)')
 
     class Meta:

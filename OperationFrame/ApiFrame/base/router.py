@@ -18,7 +18,9 @@ class APIRouter(BaseAPIRouter):
         Routers.append(self)
 
 
-router_index:   APIRouter = APIRouter(prefix="")
-router_user:    APIRouter = APIRouter(prefix="/user", tags=["User"], sort=ROUTER_SORT_APP)
-router_game:    APIRouter = APIRouter(prefix="/game", tags=["Game"])
-router_system:  APIRouter = APIRouter(prefix="/system", tags=["System"])
+router_index:      APIRouter = APIRouter(prefix="")
+router_system:     APIRouter = APIRouter(prefix="/system", tags=["System"])
+router_user:       APIRouter = APIRouter(prefix="/user", tags=["User"], sort=ROUTER_SORT_APP)
+router_role:       APIRouter = APIRouter(prefix="/role", tags=["Role"], sort=ROUTER_SORT_APP)
+router_menu:       APIRouter = APIRouter(prefix="/menu", tags=["Menu"], sort=ROUTER_SORT_APP)
+router_permission: APIRouter = APIRouter(prefix="/permission", tags=["Permission"], sort=ROUTER_SORT_APP)

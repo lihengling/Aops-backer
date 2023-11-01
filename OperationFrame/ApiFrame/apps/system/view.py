@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from starlette.websockets import WebSocketState
 from websockets.exceptions import ConnectionClosedOK
 
-from OperationFrame.ApiFrame.apps.user.models import User
+from OperationFrame.ApiFrame.apps.rbac.models import User
 from OperationFrame.ApiFrame.base.security import AUTH_SCHEME, AUTH_HEADER
 from OperationFrame.ApiFrame.utils.arq.schema import JobStatus
 from OperationFrame.ApiFrame.base import router_system, NotFindError, PERMISSION_INFO, PERMISSION_UPDATE

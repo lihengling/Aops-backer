@@ -11,7 +11,7 @@ from datetime import timedelta, datetime
 from jwt import PyJWTError
 from pydantic import ValidationError
 
-from OperationFrame.ApiFrame.apps.user.models import User
+from OperationFrame.ApiFrame.apps.rbac.models import User
 from OperationFrame.ApiFrame.base import constant
 from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, ForbiddenError
 from OperationFrame.ApiFrame.base.security import OAuth2PasswordBearer
