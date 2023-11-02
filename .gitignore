@@ -1,3 +1,4 @@
 .idea/
 *.pyc
 OperationLogs/*
+OperationFrame/migrations/*
