@@ -39,7 +39,7 @@ class DbMysqlMigrate(CommonCbv):
         if not ret:
             logger.warning(f"迁移任务:{name} | {config.MYSQL_REGISTER_MODEL} 模型未检测到任何更改")
             return
-        logger.info(f"迁移任务:{name} | {config.MYSQL_REGISTER_MODEL} 模型成功迁移成功")
+        logger.info(f"迁移任务:{name} | {config.MYSQL_REGISTER_MODEL} 模型迁移成功")
 
         ret: list = await aer.upgrade()
         if not ret:

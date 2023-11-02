@@ -3,7 +3,8 @@
 Author: 'LingLing'
 Date: 2023/04/07
 """
-from OperationFrame.ApiFrame.apps.rbac.models import User, Role, Permission, Department, Menu
+from OperationFrame.ApiFrame.apps.rbac.models import User, Role, Permission
+from OperationFrame.ApiFrame.apps.asset.models import Department, Menu
 from OperationFrame.ApiFrame.base.constant import ROUTER_SORT_DEFAULT, ROUTER_SORT_APP
 
 # CBV 模型

@@ -94,3 +94,15 @@ class PermissionBase(BaseModel):
 class PermissionListResponse(PermissionBase):
     id:          int
     description: str
+
+
+class PermissionInfoResponse(PermissionListResponse):
+    roles:       List[dict] = []
+
+
+class PermissionUpdateRequest(PermissionBase):
+    description: str
+
+
+class PermissionCreateRequest(PermissionUpdateRequest):
+    ...

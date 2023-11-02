@@ -7,10 +7,12 @@ from typing import Union, List
 from fastapi import Depends
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
-from OperationFrame.ApiFrame.apps.rbac.models import User, Role, Menu, Department, Permission
+from OperationFrame.ApiFrame.apps.asset.models import Department, Menu
+from OperationFrame.ApiFrame.apps.rbac.models import User, Role, Permission
 from OperationFrame.ApiFrame.apps.rbac.schema import UserAuthResponse, UserAuthRequest, get_user_response, \
     UserListResponse, UserInfoResponse, UserUpdateRequest, UserBase, UserCreateRequest, RoleListResponse, \
-    RoleInfoResponse, RoleBase, RoleCreateRequest, RoleUpdateRequest, PermissionListResponse
+    RoleInfoResponse, RoleBase, RoleCreateRequest, RoleUpdateRequest, PermissionListResponse, PermissionInfoResponse, \
+    PermissionBase, PermissionCreateRequest, PermissionUpdateRequest
 from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant, router_role, router_permission
 from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, NotFindError, ForbiddenError, \
     BaseValueError
@@ -284,3 +286,63 @@ async def permission_list(pagination: dict = paginate_factory(), query: Union[st
     ]
 
     return BaseResponseList(data=data, total=await Permission.filter().count())
+
+
+@router_permission.get('/{item_id}', summary='获取权限信息', response_model=BaseResponse[PermissionInfoResponse])
+async def permission_info(item_id: int):
+    permission = await Permission.get_or_none(id=item_id)
+    if permission:
+        roles = [{'id': role.id, 'role_name': role.role_name} for role in await permission.role]
+        return BaseResponse(data=dict(id=permission.id, is_active=permission.is_active, roles=roles,
+                                      description=permission.description, permission_name=permission.permission_name))
+    else:
+        raise NotFindError
+
+
+@router_permission.delete('/{item_id}', summary='删除权限', response_model=BaseResponse[PermissionBase])
+async def permission_delete(item_id: int):
+    permission = await Permission.get_or_none(id=item_id)
+    if not permission:
+        raise NotFindError
+
+    await permission.delete()
+    return BaseResponse(data=PermissionBase(permission_name=permission.permission_name, is_active=permission.is_active))
+
+
+@router_permission.post('', summary='新增权限', response_model=BaseResponse[PermissionBase])
+async def permission_create(permission_schema: PermissionCreateRequest):
+    if not isinstance(permission_schema, dict):
+        permission_dict = permission_schema.dict(exclude_unset=True)
+    else:
+        permission_dict = permission_schema
+
+    # 检查参数
+    if await Permission.filter(permission_name=permission_dict['permission_name']).exists():
+        raise BaseValueError(message=f"权限: {permission_dict['permission_name']} 已存在")
+
+    # 创建本表
+    permission = await Permission.create(permission_name=permission_dict['permission_name'],
+                                         is_active=permission_dict['is_active'],
+                                         description=permission_dict['description'])
+
+    return BaseResponse(data=PermissionBase(permission_name=permission.permission_name, is_active=permission.is_active))
+
+
+@router_permission.put('/{item_id}', summary='修改权限信息', response_model=BaseResponse[PermissionBase])
+async def permission_update(item_id: int, permission_schema: PermissionUpdateRequest):
+    if not isinstance(permission_schema, dict):
+        permission_dict = permission_schema.dict(exclude_unset=True)
+    else:
+        permission_dict = permission_schema
+
+    permission = await Permission.get_or_none(id=item_id)
+    if not permission:
+        raise NotFindError
+
+    # 更新本表
+    await permission.update_from_dict(permission_dict)
+
+    # 保存信息
+    await permission.save()
+
+    return BaseResponse(data=PermissionBase(permission_name=permission.permission_name, is_active=permission.is_active))
