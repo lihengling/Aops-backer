@@ -7,7 +7,6 @@ import bcrypt
 from async_property import async_property
 from tortoise import fields
 
-from OperationFrame.ApiFrame.apps.asset.models import Menu
 from OperationFrame.ApiFrame.base.modelMixin import IDModel
 
 
@@ -19,6 +18,7 @@ class Role(IDModel):
         fields.ManyToManyField('models.Permission', related_name='role', description='角色权限', on_delete=fields.CASCADE)
     is_active = fields.BooleanField(default=True, description='角色状态(False:禁用,True:启用)')
     is_admin = fields.BooleanField(default=False, description='是否管理员')
+    menus = fields.ForeignKeyField('models.Menu', related_name='menus', description='角色菜单外键', null=True)
 
     class Meta:
         table = 'roles'
@@ -32,9 +32,6 @@ class User(IDModel):
         fields.ManyToManyField('models.Role', related_name='user', description='用户角色', on_delete=fields.CASCADE)
     is_active = fields.BooleanField(default=True, description='用户状态(False:禁用,True:启用)')
     department = fields.ForeignKeyField('models.Department', related_name='users', description='用户部门外键', null=True)
-    menus: fields.ManyToManyRelation['Menu'] = \
-        fields.ManyToManyField('models.Menu', related_name='users', description='用户菜单', through='user_menus',
-                               on_delete=fields.CASCADE)
 
     @classmethod
     def get_password(cls, password):

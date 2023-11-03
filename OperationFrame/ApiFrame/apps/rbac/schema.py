@@ -45,8 +45,9 @@ class UserListResponse(UserBase):
 
 
 class UserInfoResponse(UserListResponse):
-    roles: List[dict] = []
-    menus: List[dict] = []
+    roles:      List[dict] = []
+    menus:      List[dict] = []
+    permission:  List[str] = []
     department:  dict
 
 

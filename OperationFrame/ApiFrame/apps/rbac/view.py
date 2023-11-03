@@ -80,15 +80,37 @@ async def user_list(pagination: dict = paginate_factory(), query: Union[str, int
 @router_user.get('/{item_id}', summary='获取用户信息', response_model=BaseResponse[UserInfoResponse])
 async def user_info(item_id: int):
     user = await User.get_or_none(id=item_id)
-    if user:
-        roles = [{'id': role.id, 'role_name': role.role_name, 'description': role.description} for role in await user.role]
-        menus = [{'id': menu.id, 'menu_name': menu.menu_name, 'url': menu.url} for menu in await user.menus]
-        dep = await user.department
-        department = {'id': dep.id, 'department_name': dep.department_name} if dep else {}
-        return BaseResponse(data=dict(id=user.id, is_admin=await user.is_admin, department=department,
-                            username=user.username, is_active=user.is_active, roles=roles, menus=menus))
-    else:
+    if not user:
         raise NotFindError
+
+    # 查询角色
+    roles = [{'id': role.id, 'role_name': role.role_name, 'description': role.description} for role in await user.role]
+
+    # 查询部门
+    dep = await user.department
+    department = {'id': dep.id, 'department_name': dep.department_name} if dep else {}
+
+    # 查询菜单
+    menus = []
+    for role in await user.role:
+        menu_obj = await role.menus
+        c_menu = {'id': menu_obj.id, 'menu_name': menu_obj.menu_name, 'url': menu_obj.url}
+        if menu_obj.parent_id:
+            menu_obj = await Menu.get_or_none(id=menu_obj.parent_id)
+            f_menu = {'id': menu_obj.id, 'menu_name': menu_obj.menu_name, 'url': menu_obj.url, 'children': c_menu}
+        else:
+            f_menu = c_menu
+
+        menus.append(f_menu)
+
+    # 查询权限
+    permission = []
+    for role in await user.role:
+        for p in await role.permission:
+            permission.append(p.permission_name)
+
+    return BaseResponse(data=dict(id=user.id, is_admin=await user.is_admin, department=department, menus=menus,
+                        username=user.username, is_active=user.is_active, roles=roles, permission=permission))
 
 
 @router_user.delete('/{item_id}', summary='删除用户', response_model=BaseResponse[UserBase])
@@ -112,7 +134,6 @@ async def user_create(user_schema: UserCreateRequest):
         user_dict = user_schema
 
     roles:        list = user_dict.pop('role_id')
-    menus:        list = user_dict.pop('menu_id')
     department_id: int = user_dict.pop('department_id')
 
     # 检查用户参数
@@ -131,11 +152,6 @@ async def user_create(user_schema: UserCreateRequest):
     for role_obj in role_objs:
         await user.role.add(role_obj)
 
-    # 创建用户菜单
-    menu_objs = [x for x in await Menu.filter(id__in=menus).all()]
-    for menu_obj in menu_objs:
-        await user.menus.add(menu_obj)
-
     return BaseResponse(data=UserBase(username=user.username, is_active=user.is_active))
 
 
@@ -147,7 +163,6 @@ async def user_update(item_id: int, user_schema: UserUpdateRequest):
         user_dict = user_schema
 
     roles:        list = user_dict.pop('role_id')
-    menus:        list = user_dict.pop('menu_id')
     department_id: int = user_dict.pop('department_id')
 
     user = await User.get_or_none(id=item_id)
@@ -171,12 +186,6 @@ async def user_update(item_id: int, user_schema: UserUpdateRequest):
     role_objs = [x for x in await Role.filter(id__in=roles).all()]
     for role_obj in role_objs:
         await user.role.add(role_obj)
-
-    # 更新用户菜单
-    await user.menus.clear()
-    menu_objs = [x for x in await Menu.filter(id__in=menus).all()]
-    for menu_obj in menu_objs:
-        await user.menus.add(menu_obj)
 
     # 保存信息
     await user.save()
