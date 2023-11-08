@@ -46,19 +46,25 @@ class UserListResponse(UserBase):
 
 class UserInfoResponse(UserListResponse):
     roles:      List[dict] = []
-    menus:      List[dict] = []
     permission:  List[str] = []
     department:  dict
 
 
 class UserUpdateRequest(UserBase):
     role_id:       List[int] = []
-    menu_id:       List[int] = []
     department_id: int
 
 
 class UserCreateRequest(UserUpdateRequest, UserAuthRequest):
     ...
+
+
+class UserMenuResponse(UserBase):
+    menus: List[dict] = []
+
+
+class UserMenuUpdateRequest(BaseModel):
+    menus: List[int] = []
 
 
 # role 模型 schema

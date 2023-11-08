@@ -3,7 +3,7 @@
 Author: 'LingLing'
 Date: 2023/03/07
 """
-from typing import Union, List
+from typing import Union, List, Type
 from fastapi import Depends
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
@@ -12,10 +12,12 @@ from OperationFrame.ApiFrame.apps.rbac.models import User, Role, Permission
 from OperationFrame.ApiFrame.apps.rbac.schema import UserAuthResponse, UserAuthRequest, get_user_response, \
     UserListResponse, UserInfoResponse, UserUpdateRequest, UserBase, UserCreateRequest, RoleListResponse, \
     RoleInfoResponse, RoleBase, RoleCreateRequest, RoleUpdateRequest, PermissionListResponse, PermissionInfoResponse, \
-    PermissionBase, PermissionCreateRequest, PermissionUpdateRequest
+    PermissionBase, PermissionCreateRequest, PermissionUpdateRequest, UserMenuResponse, UserMenuUpdateRequest
+from OperationFrame.ApiFrame.apps.rbac.depends import active_user, exists_user, admin_user, \
+    active_admin_user, exists_role, admin_role, exists_permission
+from OperationFrame.ApiFrame.apps.rbac.utils import user_menu_tree
 from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant, router_role, router_permission
-from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, NotFindError, ForbiddenError, \
-    BaseValueError
+from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, BaseValueError
 from OperationFrame.ApiFrame.utils.tools import get_model_pagination
 from OperationFrame.config import config
 from OperationFrame.config.constant import ENV_DEV
@@ -78,10 +80,9 @@ async def user_list(pagination: dict = paginate_factory(), query: Union[str, int
 
 
 @router_user.get('/{item_id}', summary='获取用户信息', response_model=BaseResponse[UserInfoResponse])
-async def user_info(item_id: int):
-    user = await User.get_or_none(id=item_id)
-    if not user:
-        raise NotFindError
+async def user_info(user: Type[User] = Depends(exists_user)):
+    if not isinstance(user, User):
+        user = exists_user(user)
 
     # 查询角色
     roles = [{'id': role.id, 'role_name': role.role_name, 'description': role.description} for role in await user.role]
@@ -90,40 +91,23 @@ async def user_info(item_id: int):
     dep = await user.department
     department = {'id': dep.id, 'department_name': dep.department_name} if dep else {}
 
-    # 查询菜单
-    menus = []
-    for role in await user.role:
-        menu_obj = await role.menus
-        c_menu = {'id': menu_obj.id, 'menu_name': menu_obj.menu_name, 'url': menu_obj.url}
-        if menu_obj.parent_id:
-            menu_obj = await Menu.get_or_none(id=menu_obj.parent_id)
-            f_menu = {'id': menu_obj.id, 'menu_name': menu_obj.menu_name, 'url': menu_obj.url, 'children': c_menu}
-        else:
-            f_menu = c_menu
-
-        menus.append(f_menu)
-
     # 查询权限
     permission = []
     for role in await user.role:
         for p in await role.permission:
             permission.append(p.permission_name)
 
-    return BaseResponse(data=dict(id=user.id, is_admin=await user.is_admin, department=department, menus=menus,
-                        username=user.username, is_active=user.is_active, roles=roles, permission=permission))
+    return BaseResponse(data=dict(id=user.id, is_admin=await user.is_admin, department=department,
+                                  username=user.username, is_active=user.is_active, roles=roles, permission=permission))
 
 
 @router_user.delete('/{item_id}', summary='删除用户', response_model=BaseResponse[UserBase])
-async def user_delete(item_id: int):
-    user = await User.get_or_none(id=item_id)
-    if not user:
-        raise NotFindError
+async def user_delete(user: Type[User] = Depends(admin_user)):
+    if not isinstance(user, User):
+        user = admin_user(user)
 
-    if await user.is_admin:
-        raise ForbiddenError(message='管理员用户不可删除')
-    else:
-        await user.delete()
-        return BaseResponse(data=UserBase(username=user.username, is_active=user.is_active))
+    await user.delete()
+    return BaseResponse(data=UserBase(username=user.username, is_active=user.is_active))
 
 
 @router_user.post('', summary='新增用户', response_model=BaseResponse[UserBase])
@@ -156,7 +140,10 @@ async def user_create(user_schema: UserCreateRequest):
 
 
 @router_user.put('/{item_id}', summary='修改用户信息', response_model=BaseResponse[UserBase])
-async def user_update(item_id: int, user_schema: UserUpdateRequest):
+async def user_update(user_schema: UserUpdateRequest, user: Type[User] = Depends(admin_user)):
+    if not isinstance(user, User):
+        user = admin_user(user)
+
     if not isinstance(user_schema, dict):
         user_dict = user_schema.dict(exclude_unset=True)
     else:
@@ -164,13 +151,6 @@ async def user_update(item_id: int, user_schema: UserUpdateRequest):
 
     roles:        list = user_dict.pop('role_id')
     department_id: int = user_dict.pop('department_id')
-
-    user = await User.get_or_none(id=item_id)
-    if not user:
-        raise NotFindError
-
-    if await user.is_admin:
-        raise ForbiddenError(message='管理员用户不可修改')
 
     # 更新用户部门
     department_obj = await Department.get_or_none(id=department_id)
@@ -193,6 +173,36 @@ async def user_update(item_id: int, user_schema: UserUpdateRequest):
     return BaseResponse(data=UserBase(username=user.username, is_active=user.is_active))
 
 
+@router_user.get('/menu/{item_id}', summary='用户菜单', response_model=BaseResponse[UserMenuResponse])
+async def user_menu(user: Type[User] = Depends(active_user)):
+    if not isinstance(user, User):
+        user = active_user(user)
+
+    menus = await user_menu_tree(user)
+    return BaseResponse(data=UserMenuResponse(username=user.username, is_active=user.is_active, menus=menus))
+
+
+@router_user.put('/menu/{item_id}', summary='用户修改菜单', response_model=BaseResponse[UserMenuResponse])
+async def user_menu_update(user_schema: UserMenuUpdateRequest, user: Type[User] = Depends(active_admin_user)):
+    if not isinstance(user, User):
+        user = active_admin_user(user)
+
+    if not isinstance(user_schema, dict):
+        user_dict = user_schema.dict(exclude_unset=True)
+    else:
+        user_dict = user_schema
+
+    # 更新用户菜单
+    await user.menu.clear()
+    menu_objs = [x for x in await Menu.filter(id__in=user_dict['menus']).all()]
+    for menu_obj in menu_objs:
+        await user.menu.add(menu_obj)
+
+    menus = await user_menu_tree(user)
+
+    return BaseResponse(data=UserMenuResponse(username=user.username, is_active=user.is_active, menus=menus))
+
+
 # role 模型接口
 @router_role.get('', summary='获取角色列表', response_model=BaseResponseList[List[RoleListResponse]])
 async def role_list(pagination: dict = paginate_factory(), query: Union[str, int] = None):
@@ -206,27 +216,22 @@ async def role_list(pagination: dict = paginate_factory(), query: Union[str, int
 
 
 @router_role.get('/{item_id}', summary='获取角色信息', response_model=BaseResponse[RoleInfoResponse])
-async def role_info(item_id: int):
-    role = await Role.get_or_none(id=item_id)
-    if role:
-        permissions = [{'id': menu.id, 'permission_name': menu.permission_name} for menu in await role.permission]
-        return BaseResponse(data=dict(id=role.id, is_admin=role.is_admin,  is_active=role.is_active,
-                                      role_name=role.role_name, permissions=permissions, description=role.description))
-    else:
-        raise NotFindError
+async def role_info(role: Type[Role] = Depends(exists_role)):
+    if not isinstance(role, Role):
+        role = exists_role(role)
+
+    permissions = [{'id': menu.id, 'permission_name': menu.permission_name} for menu in await role.permission]
+    return BaseResponse(data=dict(id=role.id, is_admin=role.is_admin,  is_active=role.is_active,
+                                  role_name=role.role_name, permissions=permissions, description=role.description))
 
 
 @router_role.delete('/{item_id}', summary='删除角色', response_model=BaseResponse[RoleBase])
-async def role_delete(item_id: int):
-    role = await Role.get_or_none(id=item_id)
-    if not role:
-        raise NotFindError
+async def role_delete(role: Type[Role] = Depends(admin_role)):
+    if not isinstance(role, Role):
+        role = admin_role(role)
 
-    if role.is_admin:
-        raise ForbiddenError(message='管理员角色不可删除')
-    else:
-        await role.delete()
-        return BaseResponse(data=RoleBase(role_name=role.role_name, is_active=role.is_active))
+    await role.delete()
+    return BaseResponse(data=RoleBase(role_name=role.role_name, is_active=role.is_active))
 
 
 @router_role.post('', summary='新增角色', response_model=BaseResponse[RoleBase])
@@ -255,20 +260,16 @@ async def role_create(role_schema: RoleCreateRequest):
 
 
 @router_role.put('/{item_id}', summary='修改角色信息', response_model=BaseResponse[RoleBase])
-async def role_update(item_id: int, role_schema: RoleUpdateRequest):
+async def role_update(role_schema: RoleUpdateRequest, role: Type[Role] = Depends(admin_role)):
+    if not isinstance(role, Role):
+        role = admin_role(role)
+
     if not isinstance(role_schema, dict):
         role_dict = role_schema.dict(exclude_unset=True)
     else:
         role_dict = role_schema
 
     permission_id: int = role_dict.pop('permission_id')
-
-    role = await Role.get_or_none(id=item_id)
-    if not role:
-        raise NotFindError
-
-    if role.is_admin:
-        raise ForbiddenError(message='管理员角色不可修改')
 
     # 更新本表
     await role.update_from_dict(role_dict)
@@ -298,21 +299,19 @@ async def permission_list(pagination: dict = paginate_factory(), query: Union[st
 
 
 @router_permission.get('/{item_id}', summary='获取权限信息', response_model=BaseResponse[PermissionInfoResponse])
-async def permission_info(item_id: int):
-    permission = await Permission.get_or_none(id=item_id)
-    if permission:
-        roles = [{'id': role.id, 'role_name': role.role_name} for role in await permission.role]
-        return BaseResponse(data=dict(id=permission.id, is_active=permission.is_active, roles=roles,
-                                      description=permission.description, permission_name=permission.permission_name))
-    else:
-        raise NotFindError
+async def permission_info(permission: Type[Permission] = Depends(exists_permission)):
+    if not isinstance(permission, Permission):
+        permission = exists_user(permission)
+
+    roles = [{'id': role.id, 'role_name': role.role_name} for role in await permission.role]
+    return BaseResponse(data=dict(id=permission.id, is_active=permission.is_active, roles=roles,
+                                  description=permission.description, permission_name=permission.permission_name))
 
 
 @router_permission.delete('/{item_id}', summary='删除权限', response_model=BaseResponse[PermissionBase])
-async def permission_delete(item_id: int):
-    permission = await Permission.get_or_none(id=item_id)
-    if not permission:
-        raise NotFindError
+async def permission_delete(permission: Type[Permission] = Depends(exists_permission)):
+    if not isinstance(permission, Permission):
+        permission = exists_user(permission)
 
     await permission.delete()
     return BaseResponse(data=PermissionBase(permission_name=permission.permission_name, is_active=permission.is_active))
@@ -338,15 +337,15 @@ async def permission_create(permission_schema: PermissionCreateRequest):
 
 
 @router_permission.put('/{item_id}', summary='修改权限信息', response_model=BaseResponse[PermissionBase])
-async def permission_update(item_id: int, permission_schema: PermissionUpdateRequest):
+async def permission_update(permission_schema: PermissionUpdateRequest,
+                            permission: Type[Permission] = Depends(exists_permission)):
+    if not isinstance(permission, Permission):
+        permission = exists_user(permission)
+
     if not isinstance(permission_schema, dict):
         permission_dict = permission_schema.dict(exclude_unset=True)
     else:
         permission_dict = permission_schema
-
-    permission = await Permission.get_or_none(id=item_id)
-    if not permission:
-        raise NotFindError
 
     # 更新本表
     await permission.update_from_dict(permission_dict)
