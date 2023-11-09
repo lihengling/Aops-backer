@@ -4,7 +4,7 @@ Author: 'LingLing'
 Date: 2023/03/30
 """
 import os
-from typing import cast, Union, Type
+from typing import cast, Union, Type, List, Dict
 from functools import reduce
 from operator import or_
 from tortoise import Model
@@ -34,3 +34,18 @@ def get_model_pagination(model: Type[Model], pagination: dict, query: Union[str,
         req = req.limit(limit)
 
     return req
+
+
+def build_foreignKey_tree(objs, parent_id: int = None) -> List[Dict]:
+    """
+    构建外键层级树,
+    注意：外键必须命名为 parent_id
+    """
+    obj_tree = []
+    for obj in objs:
+        if obj['parent_id'] == parent_id:
+            children = build_foreignKey_tree(objs, obj['id'])
+            if children:
+                obj['children'] = children
+            obj_tree.append(obj)
+    return obj_tree

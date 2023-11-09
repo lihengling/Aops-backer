@@ -116,8 +116,10 @@ async def user_create(user_schema: UserCreateRequest):
         user_dict = user_schema.dict(exclude_unset=True)
     else:
         user_dict = user_schema
+        if 'username' not in user_dict or 'password' not in user_dict or 'department_id' not in user_dict:
+            raise BaseValueError
 
-    roles:        list = user_dict.pop('role_id')
+    roles:        list = user_dict.pop('role_id') if user_dict.get('role_id', None) else []
     department_id: int = user_dict.pop('department_id')
 
     # 检查用户参数
@@ -148,8 +150,10 @@ async def user_update(user_schema: UserUpdateRequest, user: Type[User] = Depends
         user_dict = user_schema.dict(exclude_unset=True)
     else:
         user_dict = user_schema
+        if 'username' not in user_dict or 'department_id' not in user_dict:
+            raise BaseValueError
 
-    roles:        list = user_dict.pop('role_id')
+    roles:        list = user_dict.pop('role_id') if user_dict.get('role_id', None) else []
     department_id: int = user_dict.pop('department_id')
 
     # 更新用户部门
@@ -240,6 +244,9 @@ async def role_create(role_schema: RoleCreateRequest):
         role_dict = role_schema.dict(exclude_unset=True)
     else:
         role_dict = role_schema
+        if 'permission_id' not in role_dict or 'role_name' not in role_dict \
+                or 'description' not in role_dict or 'is_active' not in role_dict:
+            raise BaseValueError
 
     permission_id: int = role_dict.pop('permission_id')
 
@@ -268,6 +275,8 @@ async def role_update(role_schema: RoleUpdateRequest, role: Type[Role] = Depends
         role_dict = role_schema.dict(exclude_unset=True)
     else:
         role_dict = role_schema
+        if 'permission_id' not in role_dict:
+            raise BaseValueError
 
     permission_id: int = role_dict.pop('permission_id')
 
@@ -323,6 +332,9 @@ async def permission_create(permission_schema: PermissionCreateRequest):
         permission_dict = permission_schema.dict(exclude_unset=True)
     else:
         permission_dict = permission_schema
+        if 'permission_name' not in permission_dict or 'is_active' not in permission_dict \
+                or 'description' not in permission_dict:
+            raise BaseValueError
 
     # 检查参数
     if await Permission.filter(permission_name=permission_dict['permission_name']).exists():

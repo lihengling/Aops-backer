@@ -13,7 +13,7 @@ from OperationFrame.utils.models import BaseModel, BaseResponse
 # user 模型 schema
 class UserBase(BaseModel):
     username:   str
-    is_active: bool
+    is_active: bool = True
 
 
 class UserAuthRequest(BaseModel):
