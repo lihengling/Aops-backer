@@ -7,11 +7,12 @@ from typing import List, Union, Type
 
 from fastapi import Depends
 
-from OperationFrame.ApiFrame.apps.asset.depends import exists_menu
+from OperationFrame.ApiFrame.apps.asset.depends import exists_menu, exists_department
 from OperationFrame.ApiFrame.apps.asset.models import Menu, Department
 from OperationFrame.ApiFrame.apps.asset.schema import MenuListResponse, MenuInfoResponse, MenuBase, MenuCreateRequest, \
-    MenuUpdateRequest, DepartmentListResponse
-from OperationFrame.ApiFrame.apps.asset.utils import full_department_tree
+    MenuUpdateRequest, DepartmentListResponse, DepartmentInfoResponse, DepartmentBase, DepartmentCreateRequest, \
+    DepartmentUpdateRequest
+from OperationFrame.ApiFrame.apps.asset.utils import full_department_tree, id_department_tree
 from OperationFrame.ApiFrame.apps.rbac.utils import full_menu_tree, id_menu_tree
 from OperationFrame.ApiFrame.base import router_menu, NotFindError, router_department
 from OperationFrame.ApiFrame.base.exceptions import BaseValueError
@@ -95,3 +96,69 @@ async def menu_update(menu_schema: MenuUpdateRequest, menu: Type[Menu] = Depends
 async def department_list(pagination: dict = paginate_factory(), query: Union[str, int] = None):
     data = await full_department_tree(pagination, query)
     return BaseResponseList(data=data, total=await Department.filter().count())
+
+
+@router_department.get('/{item_id}', summary='获取部门信息', response_model=BaseResponse[DepartmentInfoResponse])
+async def department_info(item_id: int):
+    obj = await Department.get_or_none(id=item_id)
+    if not obj:
+        raise NotFindError
+
+    department = await id_department_tree(item_id)
+    return BaseResponse(data=DepartmentInfoResponse(id=obj.id, department_name=obj.department_name,
+                                                    parent_id=obj.parent_id, parent=department))
+
+
+@router_department.delete('/{item_id}', summary='删除部门', response_model=BaseResponse[DepartmentBase])
+async def department_delete(department: Type[Department] = Depends(exists_department)):
+    if not isinstance(department, Department):
+        department = exists_department(department)
+
+    await department.delete()
+    return BaseResponse(data=DepartmentBase(department_name=department.department_name, parent_id=department.parent_id))
+
+
+@router_department.post('', summary='新增部门', response_model=BaseResponse[DepartmentBase])
+async def department_create(department_schema: DepartmentCreateRequest):
+    if not isinstance(department_schema, dict):
+        department_dict = department_schema.dict()
+    else:
+        department_dict = department_schema
+        if 'department_name' not in department_dict:
+            raise BaseValueError
+
+    parent_id = department_dict.get('parent_id', None)
+
+    # 检查参数
+    if await Department.filter(department_name=department_dict['department_name']).exists():
+        raise BaseValueError(message=f"部门: {department_dict['department_name']} 已存在")
+
+    if parent_id:
+        if not await Department.filter(id=parent_id).exists():
+            raise BaseValueError(message=f"父部门id: {parent_id} 不存在")
+
+    # 创建本表
+    department = await Department.create(department_name=department_dict['department_name'],
+                                         parent_id=parent_id if parent_id and isinstance(parent_id, int) else None)
+
+    return BaseResponse(data=DepartmentBase(department_name=department.department_name, parent_id=department.parent_id))
+
+
+@router_department.put('/{item_id}', summary='修改部门信息', response_model=BaseResponse[DepartmentBase])
+async def department_update(department_schema: DepartmentUpdateRequest,
+                            department: Type[Department] = Depends(exists_department)):
+    if not isinstance(department, Department):
+        department = exists_department(department)
+
+    if not isinstance(department_schema, dict):
+        department_dict = department_schema.dict(exclude_unset=True)
+    else:
+        department_dict = department_schema
+
+    # 更新本表
+    await department.update_from_dict(department_dict)
+
+    # 保存信息
+    await department.save()
+
+    return BaseResponse(data=DepartmentBase(department_name=department.department_name, parent_id=department.parent_id))

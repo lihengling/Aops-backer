@@ -3,7 +3,7 @@
 Author: 'LingLing'
 Date: 2023/03/21
 """
-from typing import List, Union
+from typing import Union
 
 from OperationFrame.utils.models import BaseModel
 
@@ -38,4 +38,17 @@ class DepartmentBase(BaseModel):
 
 class DepartmentListResponse(DepartmentBase):
     id:        int
-    children:  Union[list, None]
+    children:  list = []
+
+
+class DepartmentInfoResponse(DepartmentBase):
+    id:        int
+    parent:   list = []
+
+
+class DepartmentCreateRequest(DepartmentBase):
+    ...
+
+
+class DepartmentUpdateRequest(DepartmentCreateRequest):
+    ...
