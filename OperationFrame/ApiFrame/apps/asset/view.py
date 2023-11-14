@@ -5,7 +5,7 @@ Date: 2023/03/07
 """
 from typing import List, Union, Type
 
-from fastapi import Depends
+from fastapi import Depends, Security
 
 from OperationFrame.ApiFrame.apps.asset.depends import exists_menu, exists_department
 from OperationFrame.ApiFrame.apps.asset.models import Menu, Department
@@ -14,20 +14,24 @@ from OperationFrame.ApiFrame.apps.asset.schema import MenuListResponse, MenuInfo
     DepartmentUpdateRequest
 from OperationFrame.ApiFrame.apps.asset.utils import full_department_tree, id_department_tree
 from OperationFrame.ApiFrame.apps.rbac.utils import full_menu_tree, id_menu_tree
-from OperationFrame.ApiFrame.base import router_menu, NotFindError, router_department
+from OperationFrame.ApiFrame.base import router_menu, NotFindError, router_department, PERMISSION_UPDATE, \
+    PERMISSION_INFO, PERMISSION_DELETE, PERMISSION_CREATE
 from OperationFrame.ApiFrame.base.exceptions import BaseValueError
+from OperationFrame.ApiFrame.utils.jwt import check_permissions
 from OperationFrame.lib.depend import paginate_factory
 from OperationFrame.utils.models import BaseResponseList, BaseResponse
 
 
 # Menu 模型接口
-@router_menu.get('', summary='获取菜单列表', response_model=BaseResponseList[List[MenuListResponse]])
+@router_menu.get('', summary='获取菜单列表', response_model=BaseResponseList[List[MenuListResponse]],
+                dependencies=[Security(check_permissions, scopes=[f'menu_{PERMISSION_INFO}'])])
 async def menu_list(pagination: dict = paginate_factory(), query: Union[str, int] = None):
     data = await full_menu_tree(pagination, query)
     return BaseResponseList(data=data, total=await Menu.filter().count())
 
 
-@router_menu.get('/{item_id}', summary='获取菜单信息', response_model=BaseResponse[List[MenuInfoResponse]])
+@router_menu.get('/{item_id}', summary='获取菜单信息', response_model=BaseResponse[List[MenuInfoResponse]],
+                dependencies=[Security(check_permissions, scopes=[f'menu_{PERMISSION_INFO}'])])
 async def menu_info(item_id: int):
     obj = await Menu.get_or_none(id=item_id)
     if not obj:
@@ -37,7 +41,8 @@ async def menu_info(item_id: int):
     return BaseResponse(data=menus)
 
 
-@router_menu.delete('/{item_id}', summary='删除权限', response_model=BaseResponse[MenuBase])
+@router_menu.delete('/{item_id}', summary='删除权限', response_model=BaseResponse[MenuBase],
+                dependencies=[Security(check_permissions, scopes=[f'menu_{PERMISSION_DELETE}'])])
 async def menu_delete(menu: Type[Menu] = Depends(exists_menu)):
     if not isinstance(menu, Menu):
         menu = exists_menu(menu)
@@ -46,7 +51,8 @@ async def menu_delete(menu: Type[Menu] = Depends(exists_menu)):
     return BaseResponse(data=MenuBase(id=menu.id, url=menu.url, menu_name=menu.menu_name, parent_id=menu.parent_id))
 
 
-@router_menu.post('', summary='新增菜单', response_model=BaseResponse[MenuBase])
+@router_menu.post('', summary='新增菜单', response_model=BaseResponse[MenuBase],
+                dependencies=[Security(check_permissions, scopes=[f'menu_{PERMISSION_CREATE}'])])
 async def menu_create(menu_schema: MenuCreateRequest):
     if not isinstance(menu_schema, dict):
         menu_dict = menu_schema.dict()
@@ -71,7 +77,8 @@ async def menu_create(menu_schema: MenuCreateRequest):
                                       url=menu.url))
 
 
-@router_menu.put('/{item_id}', summary='修改菜单信息', response_model=BaseResponse[MenuBase])
+@router_menu.put('/{item_id}', summary='修改菜单信息', response_model=BaseResponse[MenuBase],
+                dependencies=[Security(check_permissions, scopes=[f'menu_{PERMISSION_UPDATE}'])])
 async def menu_update(menu_schema: MenuUpdateRequest, menu: Type[Menu] = Depends(exists_menu)):
     if not isinstance(menu, Menu):
         menu = exists_menu(menu)
@@ -92,13 +99,15 @@ async def menu_update(menu_schema: MenuUpdateRequest, menu: Type[Menu] = Depends
 
 
 # Department 模型接口
-@router_department.get('', summary='获取部门列表', response_model=BaseResponseList[List[DepartmentListResponse]])
+@router_department.get('', summary='获取部门列表', response_model=BaseResponseList[List[DepartmentListResponse]],
+                dependencies=[Security(check_permissions, scopes=[f'department_{PERMISSION_INFO}'])])
 async def department_list(pagination: dict = paginate_factory(), query: Union[str, int] = None):
     data = await full_department_tree(pagination, query)
     return BaseResponseList(data=data, total=await Department.filter().count())
 
 
-@router_department.get('/{item_id}', summary='获取部门信息', response_model=BaseResponse[DepartmentInfoResponse])
+@router_department.get('/{item_id}', summary='获取部门信息', response_model=BaseResponse[DepartmentInfoResponse],
+                dependencies=[Security(check_permissions, scopes=[f'department_{PERMISSION_INFO}'])])
 async def department_info(item_id: int):
     obj = await Department.get_or_none(id=item_id)
     if not obj:
@@ -109,7 +118,8 @@ async def department_info(item_id: int):
                                                     parent_id=obj.parent_id, parent=department))
 
 
-@router_department.delete('/{item_id}', summary='删除部门', response_model=BaseResponse[DepartmentBase])
+@router_department.delete('/{item_id}', summary='删除部门', response_model=BaseResponse[DepartmentBase],
+                dependencies=[Security(check_permissions, scopes=[f'department_{PERMISSION_DELETE}'])])
 async def department_delete(department: Type[Department] = Depends(exists_department)):
     if not isinstance(department, Department):
         department = exists_department(department)
@@ -118,7 +128,8 @@ async def department_delete(department: Type[Department] = Depends(exists_depart
     return BaseResponse(data=DepartmentBase(department_name=department.department_name, parent_id=department.parent_id))
 
 
-@router_department.post('', summary='新增部门', response_model=BaseResponse[DepartmentBase])
+@router_department.post('', summary='新增部门', response_model=BaseResponse[DepartmentBase],
+                dependencies=[Security(check_permissions, scopes=[f'department_{PERMISSION_CREATE}'])])
 async def department_create(department_schema: DepartmentCreateRequest):
     if not isinstance(department_schema, dict):
         department_dict = department_schema.dict()
@@ -144,7 +155,8 @@ async def department_create(department_schema: DepartmentCreateRequest):
     return BaseResponse(data=DepartmentBase(department_name=department.department_name, parent_id=department.parent_id))
 
 
-@router_department.put('/{item_id}', summary='修改部门信息', response_model=BaseResponse[DepartmentBase])
+@router_department.put('/{item_id}', summary='修改部门信息', response_model=BaseResponse[DepartmentBase],
+                dependencies=[Security(check_permissions, scopes=[f'department_{PERMISSION_UPDATE}'])])
 async def department_update(department_schema: DepartmentUpdateRequest,
                             department: Type[Department] = Depends(exists_department)):
     if not isinstance(department, Department):

@@ -4,7 +4,7 @@ Author: 'LingLing'
 Date: 2023/03/07
 """
 from typing import Union, List, Type
-from fastapi import Depends
+from fastapi import Depends, Security
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
 from OperationFrame.ApiFrame.apps.asset.models import Department, Menu
@@ -16,15 +16,15 @@ from OperationFrame.ApiFrame.apps.rbac.schema import UserAuthResponse, UserAuthR
 from OperationFrame.ApiFrame.apps.rbac.depends import active_user, exists_user, admin_user, \
     active_admin_user, exists_role, admin_role, exists_permission
 from OperationFrame.ApiFrame.apps.rbac.utils import user_menu_tree
-from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant, router_role, router_permission
+from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant, router_role, router_permission, \
+    PERMISSION_INFO, PERMISSION_DELETE, PERMISSION_CREATE, PERMISSION_UPDATE
 from OperationFrame.ApiFrame.base.exceptions import AccessTokenExpire, BadRequestError, BaseValueError
 from OperationFrame.ApiFrame.utils.tools import get_model_pagination
 from OperationFrame.config import config
 from OperationFrame.config.constant import ENV_DEV
 from OperationFrame.lib.depend import paginate_factory
 from OperationFrame.utils.models import BaseResponse, BaseResponseList
-from OperationFrame.ApiFrame.utils.jwt import create_token
-
+from OperationFrame.ApiFrame.utils.jwt import create_token, check_permissions
 
 # user 模型接口
 if config.ENV == ENV_DEV:
@@ -46,9 +46,18 @@ async def register(data: UserAuthRequest) -> ORJSONResponse:
 
     user = await User.create(username=data.username, password=User.get_password(data.password))
     if not await Role.exists():
+        await Role.create(name='base_admin', role_name='普通管理员', is_admin=False, description='拥有分配到的资源所有权限')
+        await Role.create(name='base_user', role_name='基础用户', is_admin=False, description='拥有基础权限')
         role = await Role.create(name='admin', role_name='管理员', is_admin=True,
                                  description='拥有所有权限')
         await user.role.add(role)
+
+    # 赋予基础权限
+    if not await user.is_admin:
+        base_role = await Role.filter(name='base_user', is_active=True).first()
+        if base_role:
+            await user.role.add(base_role)
+
     return await get_user_response(user)
 
 
@@ -68,7 +77,8 @@ async def login(data: UserAuthRequest) -> ORJSONResponse:
     return rsp
 
 
-@router_user.get('', summary='获取用户列表', response_model=BaseResponseList[List[UserListResponse]])
+@router_user.get('', summary='获取用户列表', response_model=BaseResponseList[List[UserListResponse]],
+                 dependencies=[Security(check_permissions, scopes=[f'user_{PERMISSION_INFO}'])])
 async def user_list(pagination: dict = paginate_factory(), query: Union[str, int] = None):
     req = get_model_pagination(User, pagination, query)
     data = [
@@ -79,7 +89,8 @@ async def user_list(pagination: dict = paginate_factory(), query: Union[str, int
     return BaseResponseList(data=data, total=await User.filter().count())
 
 
-@router_user.get('/{item_id}', summary='获取用户信息', response_model=BaseResponse[UserInfoResponse])
+@router_user.get('/{item_id}', summary='获取用户信息', response_model=BaseResponse[UserInfoResponse],
+                 dependencies=[Security(check_permissions, scopes=[f'user_{PERMISSION_INFO}'])])
 async def user_info(user: Type[User] = Depends(exists_user)):
     if not isinstance(user, User):
         user = exists_user(user)
@@ -101,7 +112,8 @@ async def user_info(user: Type[User] = Depends(exists_user)):
                                   username=user.username, is_active=user.is_active, roles=roles, permission=permission))
 
 
-@router_user.delete('/{item_id}', summary='删除用户', response_model=BaseResponse[UserBase])
+@router_user.delete('/{item_id}', summary='删除用户', response_model=BaseResponse[UserBase],
+                 dependencies=[Security(check_permissions, scopes=[f'user_{PERMISSION_DELETE}'])])
 async def user_delete(user: Type[User] = Depends(admin_user)):
     if not isinstance(user, User):
         user = admin_user(user)
@@ -110,7 +122,8 @@ async def user_delete(user: Type[User] = Depends(admin_user)):
     return BaseResponse(data=UserBase(username=user.username, is_active=user.is_active))
 
 
-@router_user.post('', summary='新增用户', response_model=BaseResponse[UserBase])
+@router_user.post('', summary='新增用户', response_model=BaseResponse[UserBase],
+                 dependencies=[Security(check_permissions, scopes=[f'user_{PERMISSION_CREATE}'])])
 async def user_create(user_schema: UserCreateRequest):
     if not isinstance(user_schema, dict):
         user_dict = user_schema.dict(exclude_unset=True)
@@ -141,7 +154,8 @@ async def user_create(user_schema: UserCreateRequest):
     return BaseResponse(data=UserBase(username=user.username, is_active=user.is_active))
 
 
-@router_user.put('/{item_id}', summary='修改用户信息', response_model=BaseResponse[UserBase])
+@router_user.put('/{item_id}', summary='修改用户信息', response_model=BaseResponse[UserBase],
+                 dependencies=[Security(check_permissions, scopes=[f'user_{PERMISSION_UPDATE}'])])
 async def user_update(user_schema: UserUpdateRequest, user: Type[User] = Depends(admin_user)):
     if not isinstance(user, User):
         user = admin_user(user)
@@ -177,7 +191,8 @@ async def user_update(user_schema: UserUpdateRequest, user: Type[User] = Depends
     return BaseResponse(data=UserBase(username=user.username, is_active=user.is_active))
 
 
-@router_user.get('/menu/{item_id}', summary='用户菜单', response_model=BaseResponse[UserMenuResponse])
+@router_user.get('/menu/{item_id}', summary='用户菜单', response_model=BaseResponse[UserMenuResponse],
+                 dependencies=[Security(check_permissions)])
 async def user_menu(user: Type[User] = Depends(active_user)):
     if not isinstance(user, User):
         user = active_user(user)
@@ -186,7 +201,8 @@ async def user_menu(user: Type[User] = Depends(active_user)):
     return BaseResponse(data=UserMenuResponse(username=user.username, is_active=user.is_active, menus=menus))
 
 
-@router_user.put('/menu/{item_id}', summary='用户修改菜单', response_model=BaseResponse[UserMenuResponse])
+@router_user.put('/menu/{item_id}', summary='用户修改菜单', response_model=BaseResponse[UserMenuResponse],
+                 dependencies=[Security(check_permissions, scopes=[f'user_{PERMISSION_UPDATE}'])])
 async def user_menu_update(user_schema: UserMenuUpdateRequest, user: Type[User] = Depends(active_admin_user)):
     if not isinstance(user, User):
         user = active_admin_user(user)
@@ -208,7 +224,8 @@ async def user_menu_update(user_schema: UserMenuUpdateRequest, user: Type[User] 
 
 
 # role 模型接口
-@router_role.get('', summary='获取角色列表', response_model=BaseResponseList[List[RoleListResponse]])
+@router_role.get('', summary='获取角色列表', response_model=BaseResponseList[List[RoleListResponse]],
+                 dependencies=[Security(check_permissions, scopes=[f'role_{PERMISSION_INFO}'])])
 async def role_list(pagination: dict = paginate_factory(), query: Union[str, int] = None):
     req = get_model_pagination(Role, pagination, query)
     data = [
@@ -219,7 +236,8 @@ async def role_list(pagination: dict = paginate_factory(), query: Union[str, int
     return BaseResponseList(data=data, total=await Role.filter().count())
 
 
-@router_role.get('/{item_id}', summary='获取角色信息', response_model=BaseResponse[RoleInfoResponse])
+@router_role.get('/{item_id}', summary='获取角色信息', response_model=BaseResponse[RoleInfoResponse],
+                 dependencies=[Security(check_permissions, scopes=[f'role_{PERMISSION_INFO}'])])
 async def role_info(role: Type[Role] = Depends(exists_role)):
     if not isinstance(role, Role):
         role = exists_role(role)
@@ -229,7 +247,8 @@ async def role_info(role: Type[Role] = Depends(exists_role)):
                                   role_name=role.role_name, permissions=permissions, description=role.description))
 
 
-@router_role.delete('/{item_id}', summary='删除角色', response_model=BaseResponse[RoleBase])
+@router_role.delete('/{item_id}', summary='删除角色', response_model=BaseResponse[RoleBase],
+                 dependencies=[Security(check_permissions, scopes=[f'role_{PERMISSION_DELETE}'])])
 async def role_delete(role: Type[Role] = Depends(admin_role)):
     if not isinstance(role, Role):
         role = admin_role(role)
@@ -238,7 +257,8 @@ async def role_delete(role: Type[Role] = Depends(admin_role)):
     return BaseResponse(data=RoleBase(role_name=role.role_name, is_active=role.is_active))
 
 
-@router_role.post('', summary='新增角色', response_model=BaseResponse[RoleBase])
+@router_role.post('', summary='新增角色', response_model=BaseResponse[RoleBase],
+                 dependencies=[Security(check_permissions, scopes=[f'role_{PERMISSION_CREATE}'])])
 async def role_create(role_schema: RoleCreateRequest):
     if not isinstance(role_schema, dict):
         role_dict = role_schema.dict(exclude_unset=True)
@@ -266,7 +286,8 @@ async def role_create(role_schema: RoleCreateRequest):
     return BaseResponse(data=RoleBase(role_name=role.role_name, is_active=role.is_active))
 
 
-@router_role.put('/{item_id}', summary='修改角色信息', response_model=BaseResponse[RoleBase])
+@router_role.put('/{item_id}', summary='修改角色信息', response_model=BaseResponse[RoleBase],
+                 dependencies=[Security(check_permissions, scopes=[f'role_{PERMISSION_UPDATE}'])])
 async def role_update(role_schema: RoleUpdateRequest, role: Type[Role] = Depends(admin_role)):
     if not isinstance(role, Role):
         role = admin_role(role)
@@ -296,7 +317,8 @@ async def role_update(role_schema: RoleUpdateRequest, role: Type[Role] = Depends
 
 
 # permission 模型接口
-@router_permission.get('', summary='获取权限列表', response_model=BaseResponseList[List[PermissionListResponse]])
+@router_permission.get('', summary='获取权限列表', response_model=BaseResponseList[List[PermissionListResponse]],
+                    dependencies=[Security(check_permissions, scopes=[f'permission_{PERMISSION_INFO}'])])
 async def permission_list(pagination: dict = paginate_factory(), query: Union[str, int] = None):
     req = get_model_pagination(Permission, pagination, query)
     data = [
@@ -307,7 +329,8 @@ async def permission_list(pagination: dict = paginate_factory(), query: Union[st
     return BaseResponseList(data=data, total=await Permission.filter().count())
 
 
-@router_permission.get('/{item_id}', summary='获取权限信息', response_model=BaseResponse[PermissionInfoResponse])
+@router_permission.get('/{item_id}', summary='获取权限信息', response_model=BaseResponse[PermissionInfoResponse],
+                    dependencies=[Security(check_permissions, scopes=[f'permission_{PERMISSION_INFO}'])])
 async def permission_info(permission: Type[Permission] = Depends(exists_permission)):
     if not isinstance(permission, Permission):
         permission = exists_user(permission)
@@ -317,7 +340,8 @@ async def permission_info(permission: Type[Permission] = Depends(exists_permissi
                                   description=permission.description, permission_name=permission.permission_name))
 
 
-@router_permission.delete('/{item_id}', summary='删除权限', response_model=BaseResponse[PermissionBase])
+@router_permission.delete('/{item_id}', summary='删除权限', response_model=BaseResponse[PermissionBase],
+                    dependencies=[Security(check_permissions, scopes=[f'permission_{PERMISSION_DELETE}'])])
 async def permission_delete(permission: Type[Permission] = Depends(exists_permission)):
     if not isinstance(permission, Permission):
         permission = exists_user(permission)
@@ -326,7 +350,8 @@ async def permission_delete(permission: Type[Permission] = Depends(exists_permis
     return BaseResponse(data=PermissionBase(permission_name=permission.permission_name, is_active=permission.is_active))
 
 
-@router_permission.post('', summary='新增权限', response_model=BaseResponse[PermissionBase])
+@router_permission.post('', summary='新增权限', response_model=BaseResponse[PermissionBase],
+                    dependencies=[Security(check_permissions, scopes=[f'permission_{PERMISSION_CREATE}'])])
 async def permission_create(permission_schema: PermissionCreateRequest):
     if not isinstance(permission_schema, dict):
         permission_dict = permission_schema.dict(exclude_unset=True)
@@ -348,7 +373,8 @@ async def permission_create(permission_schema: PermissionCreateRequest):
     return BaseResponse(data=PermissionBase(permission_name=permission.permission_name, is_active=permission.is_active))
 
 
-@router_permission.put('/{item_id}', summary='修改权限信息', response_model=BaseResponse[PermissionBase])
+@router_permission.put('/{item_id}', summary='修改权限信息', response_model=BaseResponse[PermissionBase],
+                    dependencies=[Security(check_permissions, scopes=[f'permission_{PERMISSION_UPDATE}'])])
 async def permission_update(permission_schema: PermissionUpdateRequest,
                             permission: Type[Permission] = Depends(exists_permission)):
     if not isinstance(permission, Permission):

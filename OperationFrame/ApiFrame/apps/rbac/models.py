@@ -12,6 +12,7 @@ from OperationFrame.ApiFrame.base.modelMixin import IDModel
 
 class Role(IDModel):
     user: fields.ManyToManyRelation['User']
+    name = fields.CharField(max_length=15, unique=True, description='角色名称字段')
     role_name = fields.CharField(max_length=30, unique=True, description='角色名称')
     description = fields.TextField(null=True, description='角色描述')
     permission: fields.ManyToManyRelation['Permission'] = \

@@ -18,6 +18,7 @@ ROUTER_SORT_DEFAULT:              str = 'default'
 ROUTER_START_SWITCH:              str = '/api'
 
 # 接口权限标识
-PERMISSION_INFO:                 str = 'info'
+PERMISSION_INFO:                 str = 'get'
 PERMISSION_UPDATE:               str = 'update'
 PERMISSION_DELETE:               str = 'delete'
+PERMISSION_CREATE:               str = 'create'
