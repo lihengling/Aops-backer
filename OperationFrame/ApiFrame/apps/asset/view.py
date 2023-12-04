@@ -41,14 +41,15 @@ async def menu_info(item_id: int):
     return BaseResponse(data=menus)
 
 
-@router_menu.delete('/{item_id}', summary='删除权限', response_model=BaseResponse[MenuBase],
+@router_menu.delete('/{item_id}', summary='删除菜单', response_model=BaseResponse[MenuBase],
                 dependencies=[Security(check_permissions, scopes=[f'menu_{PERMISSION_DELETE}'])])
 async def menu_delete(menu: Type[Menu] = Depends(exists_menu)):
     if not isinstance(menu, Menu):
         menu = exists_menu(menu)
 
     await menu.delete()
-    return BaseResponse(data=MenuBase(id=menu.id, url=menu.url, menu_name=menu.menu_name, parent_id=menu.parent_id))
+    return BaseResponse(data=MenuBase(id=menu.id, is_show=menu.is_show, menu_name=menu.menu_name,
+                                      parent_id=menu.parent_id))
 
 
 @router_menu.post('', summary='新增菜单', response_model=BaseResponse[MenuBase],
@@ -58,7 +59,7 @@ async def menu_create(menu_schema: MenuCreateRequest):
         menu_dict = menu_schema.dict()
     else:
         menu_dict = menu_schema
-        if 'menu_name' not in menu_dict or 'url' not in menu_dict:
+        if all(x in menu_dict for x in ['menu_name', 'path', 'component', 'menu_title']):
             raise BaseValueError
 
     # 检查参数
@@ -69,12 +70,17 @@ async def menu_create(menu_schema: MenuCreateRequest):
         if not await Menu.filter(id=menu_dict['parent_id']).exists():
             raise BaseValueError(message=f"父菜单id: {menu_dict['parent_id']} 不存在")
 
+    if menu_dict['is_cache'] and not isinstance(menu_dict['is_cache'], bool):
+        raise BaseValueError(message=f"is_cache 参数错误")
+
+    if menu_dict['is_show'] and not isinstance(menu_dict['is_show'], bool):
+        raise BaseValueError(message=f"is_show 参数错误")
+
     # 创建本表
-    menu = await Menu.create(menu_name=menu_dict['menu_name'], url=menu_dict['url'],
-                             parent_id=menu_dict['parent_id'])
+    menu = await Menu.create(**menu_dict)
 
     return BaseResponse(data=MenuBase(id=menu.id, menu_name=menu.menu_name, parent_id=menu.parent_id,
-                                      url=menu.url))
+                                      is_show=menu.is_show))
 
 
 @router_menu.put('/{item_id}', summary='修改菜单信息', response_model=BaseResponse[MenuBase],
@@ -95,7 +101,7 @@ async def menu_update(menu_schema: MenuUpdateRequest, menu: Type[Menu] = Depends
     await menu.save()
 
     return BaseResponse(data=MenuBase(id=menu.id, menu_name=menu.menu_name, parent_id=menu.parent_id,
-                                      url=menu.url))
+                                      is_show=menu.is_show))
 
 
 # Department 模型接口

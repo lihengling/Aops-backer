@@ -14,20 +14,25 @@ from OperationFrame.ApiFrame.utils.tools import get_model_pagination, build_fore
 # 完整菜单树
 async def full_menu_tree(pagination: dict, query: Union[str, int] = None) -> List[Dict]:
     objs = get_model_pagination(Menu, pagination, query)
-    objs = await objs
-    obj_list = [{'id': x.id, 'menu_name': x.menu_name, 'url': x.url, 'parent_id': x.parent_id} for x in objs]
+    obj_list = [{'id': x.id, 'menu_name': x.menu_name, 'is_show': x.is_show, 'parent_id': x.parent_id,
+                 'icon': x.icon, 'path': x.path, 'frame_url': x.frame_url, 'component': x.component,
+                 'menu_title': x.menu_title} for x in await objs]
     return build_foreignKey_tree(obj_list)
 
 
 # 用户菜单树
 async def user_menu_tree(user: User) -> List[Dict]:
     objs = await user.menu if not await user.is_admin else await Menu.all()
-    obj_list = [{'id': x.id, 'menu_name': x.menu_name, 'url': x.url, 'parent_id': x.parent_id} for x in objs]
+    obj_list = [{'id': x.id, 'menu_name': x.menu_name, 'is_show': x.is_show, 'parent_id': x.parent_id,
+                 'icon': x.icon, 'path': x.path, 'sort': x.sort, 'is_cache': x.is_cache, 'frame_url': x.frame_url,
+                 'component': x.component, 'menu_title': x.menu_title} for x in objs]
     return build_foreignKey_tree(obj_list)
 
 
 # id菜单树
 async def id_menu_tree(item_id: int) -> List[Dict]:
     objs = await Menu.filter(Q(id=item_id) | Q(parent_id=item_id)).all()
-    obj_list = [{'id': x.id, 'menu_name': x.menu_name, 'url': x.url, 'parent_id': x.parent_id} for x in objs]
+    obj_list = [{'id': x.id, 'menu_name': x.menu_name, 'is_show': x.is_show, 'parent_id': x.parent_id,
+                 'icon': x.icon, 'path': x.path, 'sort': x.sort, 'is_cache': x.is_cache, 'frame_url': x.frame_url,
+                 'component': x.component, 'menu_title': x.menu_title} for x in objs]
     return build_foreignKey_tree(obj_list)

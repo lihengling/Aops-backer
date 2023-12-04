@@ -22,6 +22,7 @@ class UserAuthRequest(BaseModel):
 
 
 class UserAuthResponse(UserBase):
+    id:         int
     is_admin:  bool = False
     permission: set = set()
     token:      str = None
@@ -30,6 +31,7 @@ class UserAuthResponse(UserBase):
 async def get_user_response(user: User, token: str = None) -> ORJSONResponse:
     return ORJSONResponse(
         BaseResponse(data=UserAuthResponse(
+            id=user.id,
             username=user.username,
             is_active=user.is_active,
             is_admin=await user.is_admin,

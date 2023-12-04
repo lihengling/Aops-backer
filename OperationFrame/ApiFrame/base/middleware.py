@@ -3,6 +3,7 @@
 Author: 'LingLing'
 Date: 2023/03/03
 """
+import typing
 from time import time
 from uuid import uuid4
 
@@ -10,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response
 from starlette.types import ASGIApp
 from werkzeug import Request
+from fastapi.middleware.cors import CORSMiddleware as BaseCORSMiddleware
 
 from OperationFrame.ApiFrame.base.exceptions import BadRequestError
 from OperationFrame.config import config
@@ -28,6 +30,28 @@ def add_wrapper(cls):
     if getattr(cls, 'using', True):
         Middleware.append((getattr(cls, 'name', None) or cls.__name__, cls))
     return wrapper
+
+
+@add_wrapper
+class CORSMiddleware(BaseCORSMiddleware):
+    """ http: 跨域处理 """
+    app:    ASGIApp
+    name:       str = 'cors'
+    using:     bool = config.SERVER_TYPE == SERVER_TAG_HTTP
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        allow_origins: typing.Sequence[str] = ("*",),
+        allow_methods: typing.Sequence[str] = ("*",),
+        allow_headers: typing.Sequence[str] = ("*",),
+        allow_credentials: bool = True,
+        allow_origin_regex: typing.Optional[str] = None,
+        expose_headers: typing.Sequence[str] = (),
+        max_age: int = 600,
+    ) -> None:
+        super().__init__(app, allow_origins, allow_methods, allow_headers, allow_credentials,
+                         allow_origin_regex, expose_headers, max_age)
 
 
 @add_wrapper

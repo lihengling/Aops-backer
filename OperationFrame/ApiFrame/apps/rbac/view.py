@@ -13,8 +13,8 @@ from OperationFrame.ApiFrame.apps.rbac.schema import UserAuthResponse, UserAuthR
     UserListResponse, UserInfoResponse, UserUpdateRequest, UserBase, UserCreateRequest, RoleListResponse, \
     RoleInfoResponse, RoleBase, RoleCreateRequest, RoleUpdateRequest, PermissionListResponse, PermissionInfoResponse, \
     PermissionBase, PermissionCreateRequest, PermissionUpdateRequest, UserMenuResponse, UserMenuUpdateRequest
-from OperationFrame.ApiFrame.apps.rbac.depends import active_user, exists_user, admin_user, \
-    active_admin_user, exists_role, admin_role, exists_permission
+from OperationFrame.ApiFrame.apps.rbac.depends import exists_user, admin_user, \
+    active_admin_user, exists_role, admin_role, exists_permission, active_user
 from OperationFrame.ApiFrame.apps.rbac.utils import user_menu_tree
 from OperationFrame.ApiFrame.base import router_user, ORJSONResponse, constant, router_role, router_permission, \
     PERMISSION_INFO, PERMISSION_DELETE, PERMISSION_CREATE, PERMISSION_UPDATE

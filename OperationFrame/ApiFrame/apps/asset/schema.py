@@ -9,25 +9,45 @@ from OperationFrame.utils.models import BaseModel
 
 
 class MenuBase(BaseModel):
-    url:       str
+    id:         int
+    is_show:   bool = True
     menu_name: str
     parent_id: Union[int, None] = None
 
 
 class MenuListResponse(MenuBase):
-    id:        int
-    children:  Union[list, None]
+    icon:       Union[str, None]
+    path:       str
+    component:  str
+    menu_title: str
+    frame_url:  Union[str, None]
+    children:   Union[list, None]
 
 
-class MenuInfoResponse(MenuListResponse):
-    ...
+class MenuInfoResponse(BaseModel):
+    sort:       Union[int, None]
+    icon:       Union[str, None]
+    path:       str
+    is_cache:   bool = False
+    component:  str
+    menu_title: str
+    frame_url:  Union[str, None]
+    children:   Union[list, None]
 
 
-class MenuUpdateRequest(MenuBase):
-    ...
+class MenuUpdateRequest(BaseModel):
+    sort:       Union[int, None]
+    icon:       Union[str, None]
+    path:       str
+    is_cache:   bool = False
+    component:  str
+    menu_title: str
+    menu_name:  str
+    frame_url:  Union[str, None]
+    parent_id:  Union[int, None] = None
 
 
-class MenuCreateRequest(MenuBase):
+class MenuCreateRequest(MenuUpdateRequest):
     ...
 
 

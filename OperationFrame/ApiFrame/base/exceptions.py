@@ -30,18 +30,6 @@ class BaseError(Exception):
     def __init__(self, **kwargs):
         self.__dict__.update(**kwargs)
 
-    @classmethod
-    def get_response(cls, e=None) -> ORJSONResponse:
-        if not e:
-            e = cls()
-
-        http_status = HTTPStatus(getattr(e, 'HTTPStatus', HTTPStatus.INTERNAL_SERVER_ERROR))
-        return ORJSONResponse(BaseResponse(
-            code=e.code,
-            message=http_status.phrase + " | " + e.message,
-            data=e.data,
-        ), status_code=http_status.value)
-
 
 @init_error_response
 class BadRequestError(BaseError):
@@ -142,7 +130,9 @@ async def exception_handler(request: Request, e: Exception) -> Response:
     response: Response = Response(
         dumps(response.dict(include={'code', 'message', 'data'}), default=str),
         status_code=http_status.value,
-        media_type="application/json"
+        media_type="application/json",
+        headers={"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Credentials": "true",
+                 "Access-Control-Allow-Methods": "*", "Access-Control-Allow-Headers": "*"}
     )
     # 处于用户/角色认证模式时候，失败清除 cookie
     if isinstance(e, AccessTokenExpire) and config.VERIFY_TYPE_AUTH:
