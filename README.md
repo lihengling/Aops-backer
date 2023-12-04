@@ -1,6 +1,8 @@
 ## Aops-backer
 
-> 这是一个基于 OperationFrame 的异步 api 框架，可以快速开发接口
+> OperationFrame：一个异步 api 框架
+
+> 本项目将以 OperationFrame 为后端开发一套运维管理后台接口
 
 ### 功能
 - 基于 jwt 的接口权限校验： rbac 
@@ -8,7 +10,6 @@
 - 异步任务后台执行： arq 
 - http/rpc 两种访问方式
 - 菜单项目任务执行
-
 
 ### 相关包
 
