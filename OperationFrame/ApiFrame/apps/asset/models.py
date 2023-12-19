@@ -3,7 +3,6 @@
 Author: 'LingLing'
 Date: 2023/03/21
 """
-from async_property import async_property
 from tortoise import fields
 
 from OperationFrame.ApiFrame.apps.rbac.models import User
@@ -11,8 +10,10 @@ from OperationFrame.ApiFrame.base.modelMixin import IDModel
 
 
 class Department(IDModel):
-    department_name = fields.CharField(max_length=30, description='部门名称')
+    department_name = fields.CharField(max_length=30, description='部门名称', unique=True)
     parent = fields.ForeignKeyField('models.Department', related_name='children', description='父部门关系外键', null=True)
+    is_active = fields.BooleanField(default=True, description='部门是否启用')
+    description = fields.CharField(max_length=255, null=True, description='部门描述')
     parent_id: fields.ForeignKeyField
 
     class Meta:

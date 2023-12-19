@@ -52,6 +52,7 @@ class FrameLoader(BaseModel):
     TASK_DEFAULT_WORKER:               str = 20                        # 并发任务默认并发数
     TASK_MAX_WORKER:                  list = []                        # 定义并发任务特定最大并发数列表
     WS_HEART_BEAT_TIME:                int = 10                        # ws 接口心跳频率检测时间
+    PAGE_SIZE:                         int = 50                        # 单页返回最大数量
 
 
 class ServiceLoader(BaseModel):

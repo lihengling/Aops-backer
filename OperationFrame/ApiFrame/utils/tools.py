@@ -4,11 +4,12 @@ Author: 'LingLing'
 Date: 2023/03/30
 """
 import os
-from typing import cast, Union, Type, List, Dict
+from typing import Type, List, Dict
 from functools import reduce
 from operator import or_
 from tortoise import Model
 
+from OperationFrame.lib.depend import PageQuery
 from OperationFrame.ApiFrame.utils.cbv.core import get_cbv_exp
 
 
@@ -23,16 +24,12 @@ def is_file_changed(file_path: str) -> bool:
     return False
 
 
-def get_model_pagination(model: Type[Model], pagination: dict, query: Union[str, int] = None):
+def get_model_pagination(model: Type[Model], pq: PageQuery):
     """
     获取模型分页处理查询
     """
-    skip, limit = pagination.get("skip", 0), pagination.get("limit", None)
-    query_model = model.filter(reduce(or_, get_cbv_exp(model, query))) if query is not None else model
-    req = query_model.all().offset(cast(int, skip))
-    if limit:
-        req = req.limit(limit)
-
+    query_model = model.filter(reduce(or_, get_cbv_exp(model, pq.query))) if pq.query else model
+    req = query_model.all().limit(pq.pageSize).offset((pq.pageIndex - 1) * pq.pageSize)
     return req
 
 

@@ -3,11 +3,12 @@
 Author: 'LingLing'
 Date: 2023/03/21
 """
+from datetime import datetime
 from typing import Union
 
 from fastapi import Query
 
-from OperationFrame.ApiFrame.apps.asset.models import Menu
+from OperationFrame.ApiFrame.apps.asset.models import Menu, Department
 from OperationFrame.utils.models import BaseModel, BaseResponse
 
 
@@ -58,23 +59,30 @@ def get_menu_response(obj: Menu) -> BaseResponse:
 
 
 class DepartmentBase(BaseModel):
+    id:              int
+    is_active:       bool
     department_name: str
-    parent_id:       Union[int, None] = None
 
 
-class DepartmentListResponse(DepartmentBase):
-    id:        int
-    children:  list = []
+class DepartmentListResponse(BaseModel):
+    id:              int
+    is_active:       bool
+    created_at:      datetime
+    children:        list = []
+    description:     str
+    department_name: str
 
 
-class DepartmentInfoResponse(DepartmentBase):
-    id:        int
-    parent:   list = []
-
-
-class DepartmentCreateRequest(DepartmentBase):
-    ...
+class DepartmentCreateRequest(BaseModel):
+    department_name: str = Query(..., description='部门名称', max_length=50, min_length=1)
+    is_active:      bool = Query(True, description='是否启用')
+    parent_id:       int = Query(None, description='父id', gt=0)
+    description:     str = Query(None, description='部门描述', max_length=255)
 
 
 class DepartmentUpdateRequest(DepartmentCreateRequest):
-    ...
+    id:              int = Query(..., description='主键id', gt=0)
+
+
+def get_department_response(obj: Department) -> BaseResponse:
+    return BaseResponse(data=DepartmentBase(id=obj.id, is_active=obj.is_active, department_name=obj.department_name))

@@ -34,7 +34,7 @@ class CurdGenerator:
         elif isinstance(schema, dict):
             _, _, failed = validate_model(schema_type, schema)
             if failed is not None:
-                raise BaseValueError(message=f'{failed}')
+                raise BaseValueError(message=f'格式化数据结构失败 | {failed}')
         else:
             raise BaseValueError
 
