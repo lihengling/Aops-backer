@@ -9,7 +9,7 @@ import toml
 import pydantic
 from pathlib import Path
 from typing import Any, List, Union
-from redis import Redis, AuthenticationError
+from redis import Redis, AuthenticationError, ConnectionError
 
 from OperationFrame.utils.models import BaseModel
 from OperationFrame.config.constant import CACHES_CONFIG_KEY, TOML_DIR, ENV_NAME, ENV_DEV
