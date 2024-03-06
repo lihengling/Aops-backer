@@ -12,6 +12,7 @@ from typing import Union
 from importlib import import_module
 
 from OperationFrame.config import config, platform
+from OperationFrame.lib.depend import PageQuery
 
 
 def import_paths(module: str):
@@ -55,21 +56,30 @@ def md5_sha256_value(value: str, time: str) -> str:
     return encrypt_value
 
 
-def paginate_list(data_list: list, skip: int, limit: Union[int, None]):
+def paginate_list(data_list: list, page_query: Union[PageQuery, dict]):
     """
     列表分页器
     """
-    if skip < 0:
-        return []
-    if limit is None:
-        return data_list[skip:]
-    if limit <= 0:
-        return []
+    if isinstance(page_query, dict):
+        page_query = PageQuery(**page_query)
 
-    start_index = skip
-    end_index = min(skip + limit, len(data_list))
+    total_pages = (len(data_list) + page_query.pageSize - 1) // page_query.pageSize
+    paginated_list = []
 
-    return data_list[start_index:end_index]
+    start_index = (page_query.pageIndex - 1) * page_query.pageSize
+    end_index = start_index + page_query.pageSize
+
+    if start_index >= len(data_list):
+        return [], total_pages
+
+    if end_index > len(data_list):
+        end_index = len(data_list)
+
+    while start_index < end_index:
+        paginated_list.append(data_list[start_index])
+        start_index += 1
+
+    return paginated_list, total_pages
 
 
 def is_ip_address(ip_address: str) -> bool:

@@ -10,7 +10,7 @@ from operator import or_
 from tortoise import Model
 
 from OperationFrame.lib.depend import PageQuery
-from OperationFrame.ApiFrame.utils.cbv.core import get_cbv_exp
+from OperationFrame.utils.tools import get_model_query_field
 
 
 def is_file_changed(file_path: str) -> bool:
@@ -28,7 +28,7 @@ def get_model_pagination(model: Type[Model], pq: PageQuery):
     """
     获取模型分页处理查询
     """
-    query_model = model.filter(reduce(or_, get_cbv_exp(model, pq.query))) if pq.query else model
+    query_model = model.filter(reduce(or_, get_model_query_field(model, pq.query))) if pq.query else model
     req = query_model.all().limit(pq.pageSize).offset((pq.pageIndex - 1) * pq.pageSize)
     return req
 

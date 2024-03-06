@@ -7,8 +7,10 @@ from datetime import datetime
 from typing import Union
 
 from fastapi import Query
+from pydantic import validator
 
 from OperationFrame.ApiFrame.apps.asset.models import Menu, Department
+from OperationFrame.ApiFrame.base.exceptions import BaseValueError
 from OperationFrame.utils.models import BaseModel, BaseResponse
 
 
@@ -77,11 +79,17 @@ class DepartmentCreateRequest(BaseModel):
     department_name: str = Query(..., description='部门名称', max_length=50, min_length=1)
     is_active:      bool = Query(True, description='是否启用')
     parent_id:       int = Query(None, description='父id', gt=0)
-    description:     str = Query(None, description='部门描述', max_length=255)
+    description:     str = Query('', description='部门描述', max_length=255)
 
 
 class DepartmentUpdateRequest(DepartmentCreateRequest):
     id:              int = Query(..., description='主键id', gt=0)
+
+    @validator('id')
+    def id_not_equal_parent_id(cls, v, values):
+        if 'parent_id' in values and v == values['parent_id']:
+            raise BaseValueError(message=f"更新失败 | 父级id 不能为自身 id")
+        return v
 
 
 def get_department_response(obj: Department) -> BaseResponse:

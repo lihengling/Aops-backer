@@ -12,7 +12,7 @@ from typing import List
 
 from arq.constants import in_progress_key_prefix, default_queue_name, abort_jobs_ss
 from arq.jobs import JobDef
-from fastapi import WebSocket, Security
+from fastapi import WebSocket, Security, Depends
 from fastapi.security.utils import get_authorization_scheme_param
 from jwt import PyJWTError
 from pydantic import ValidationError
@@ -27,9 +27,9 @@ from OperationFrame.ApiFrame.base import constant
 from OperationFrame.ApiFrame.utils.arq import Worker
 from OperationFrame.ApiFrame.utils.jwt import check_permissions
 from OperationFrame.config import config
-from OperationFrame.lib.depend import paginate_factory
+from OperationFrame.lib.depend import PageQuery
 from OperationFrame.lib.tools import paginate_list, get_file
-from OperationFrame.utils.models import BaseResponse
+from OperationFrame.utils.models import BaseResponse, BaseResponseList
 from OperationFrame.utils.context import context
 
 
@@ -52,9 +52,9 @@ async def worker_abort(job_id: str):
         raise NotFindError(message=f'{job_id} 已完成或不存在')
 
 
-@router_system.get("/worker", summary="worker 任务列表", response_model=BaseResponse[List[JobStatus]],
+@router_system.get("/worker", summary="worker 任务列表", response_model=BaseResponseList[List[JobStatus]],
                    dependencies=[Security(check_permissions, scopes=[f'worker_{PERMISSION_INFO}'])])
-async def worker(pagination: dict = paginate_factory()):
+async def worker(page_query: PageQuery = Depends(PageQuery)):
     req: List[JobStatus] = []
     result_jobs = await context.pool.all_job_results()
     queued_jobs = await context.pool.keys(f'{in_progress_key_prefix}*')
@@ -73,7 +73,8 @@ async def worker(pagination: dict = paginate_factory()):
             req.append(JobStatus(start_time=job_def.enqueue_time.timestamp(), job_name=value_b.decode(),
                                  job_params=f"{str(job_def.args)} | {str(job_def.kwargs)}", job_id=job.split(':')[-1]))
 
-    return BaseResponse(data=paginate_list(req, pagination['skip'], pagination['limit']))
+    data, _ = paginate_list(req, page_query)
+    return BaseResponseList(data=data, total=len(req))
 
 
 @router_system.websocket("/worker/ws/{job_id}", name="worker 任务日志")
