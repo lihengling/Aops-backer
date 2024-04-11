@@ -41,6 +41,7 @@ class FrameLoader(BaseModel):
     WORKER_MAX_JOBS:                   int = 15                        # 异步任务最大并发数
     WORKER_DSN:         Optional[RedisDsn]                             # 异步任务连接
     VERIFY_TYPE_AUTH:                 bool = False                     # 是否启动角色验证(这将注册额外的表)
+    VERIFY_TYPE_KEY:                  bool = False                     # 是否启动校验加解密key中间件
     MYSQL_TORTOISE_ORM:     Optional[dict]                             # tortoise 引擎
     LOGS_DIR_NAME:                     str = 'OperationLogs'           # 日志存放目录名称
     LOGS_ACCESS_SAVE:                  str = 3                         # 日志保留时间(单位: 天)

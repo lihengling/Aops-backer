@@ -14,7 +14,7 @@ class Department(IDModel):
     parent = fields.ForeignKeyField('models.Department', related_name='children', description='父部门关系外键', null=True)
     is_active = fields.BooleanField(default=True, description='部门是否启用')
     description = fields.CharField(max_length=255, null=True, description='部门描述')
-    parent_id: fields.ForeignKeyField
+    # parent_id: fields.ForeignKeyField
 
     class Meta:
         table = 'department'
@@ -35,7 +35,7 @@ class Menu(IDModel):
     sort = fields.IntField(null=True, description='排序, 菜单按数字大小排序返回')
     component = fields.CharField(max_length=100, null=True, description='组件名称')
     parent = fields.ForeignKeyField('models.Menu', related_name='children', description='父菜单关系外键', null=True)
-    parent_id: fields.ForeignKeyField
+    # parent_id: fields.ForeignKeyField
 
     @property
     def is_menu(self) -> bool:

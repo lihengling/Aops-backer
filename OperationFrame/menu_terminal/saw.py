@@ -9,6 +9,7 @@ from typing import Union
 
 import uvicorn
 import subprocess
+from uvicorn.server import Server, Config
 
 from OperationFrame.config import config, platform
 from OperationFrame.utils.cbvmenu import CommonCbv, TAG_SAW
@@ -91,21 +92,25 @@ class ServerStart(CommonCbv):
     ]
 
     @classmethod
-    def debug_up(cls):
-        uvicorn.run(app=cls.cmd[1], host=config.SERVER_HOST,
-                    port=config.SERVER_PORT, debug=config.SERVER_DEBUG, reload=config.SERVER_RELOAD)
+    async def debug_up(cls):
+        _config = dict(app=cls.cmd[1], host=config.SERVER_HOST, port=config.SERVER_PORT,
+                       debug=config.SERVER_DEBUG, reload=config.SERVER_RELOAD)
+        if config.SERVER_DEBUG:
+            uvicorn.run(**_config)
+        else:
+            await Server(config=Config(**_config)).serve()
 
     @classmethod
     async def run(cls, debug: bool = False):
         if platform == 'win32':
-            cls.debug_up()
+            await cls.debug_up()
         else:
             ServerStatus.status_print = False
             if await ServerStatus.run():
                 logger.info(f'{server_name} 已处于启动状态')
                 return
             if debug is True:
-                cls.debug_up()
+                await cls.debug_up()
             else:
                 subprocess.run(cls.cmd)
                 logger.info(f'{server_name} 启动成功')

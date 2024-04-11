@@ -11,9 +11,8 @@ from fastapi import HTTPException as FHTTPException
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as SHTTPException
 
-from OperationFrame.ApiFrame.apps import CBV_MODELS
+from OperationFrame.ApiFrame.apps import MODEL_VIEWS
 from OperationFrame.ApiFrame.utils.arq import Worker
-from OperationFrame.ApiFrame.utils.cbv import get_cbv_router
 from OperationFrame.config import config
 from OperationFrame.config.constant import CACHES_CONFIG_KEY, SERVER_TAG_HTTP, SERVER_TAG_RPC
 from OperationFrame.utils.cbvmenu import TAG_SAW, menu, TYPE_WORKER
@@ -59,18 +58,6 @@ if config.SERVER_TYPE == SERVER_TAG_HTTP:
             continue
         app.include_router(route)
         logger.debug(f"include router: {route.sort} => {route.prefix}")
-
-# 载入 cbv 路由
-for sort, models in CBV_MODELS.items():
-    for model in models:
-        if not config.VERIFY_TYPE_AUTH and sort == ROUTER_SORT_APP:
-            continue
-        router = get_cbv_router(model, sort)
-        Routers.append(router)
-        if config.SERVER_TYPE != SERVER_TAG_HTTP:
-            continue
-        app.include_router(router)
-        logger.debug(f"include cbv: {sort} => {router.prefix}")
 
 # 载入中间件
 for name, middleware in Middleware[::-1]:

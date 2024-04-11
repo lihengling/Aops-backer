@@ -258,8 +258,11 @@ class Worker(BaseWorker):
                     logger.debug('job %s already running elsewhere', job_id)
                     continue
 
-                job_def: JobDef = await context.pool._get_job_def(job_id_b, None)
-                job_name = self.get_job_name(job_def.function)
+                try:
+                    job_def: JobDef = await context.pool._get_job_def(job_id_b, None)
+                    job_name = self.get_job_name(job_def.function)
+                except Exception:
+                    job_name = ''
 
                 pipe.multi()
                 pipe.psetex(

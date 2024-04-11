@@ -8,7 +8,7 @@ from OperationFrame.ApiFrame.apps.asset.models import Department, Menu
 from OperationFrame.ApiFrame.base.constant import ROUTER_SORT_DEFAULT, ROUTER_SORT_APP
 
 # CBV 模型
-CBV_MODELS = {
+MODEL_VIEWS = {
     # 业务 模型
     ROUTER_SORT_DEFAULT: [],
     # 用户、角色 模型

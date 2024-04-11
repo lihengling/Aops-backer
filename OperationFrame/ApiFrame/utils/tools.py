@@ -3,7 +3,6 @@
 Author: 'LingLing'
 Date: 2023/03/30
 """
-import os
 from typing import Type, List, Dict
 from functools import reduce
 from operator import or_
@@ -11,17 +10,6 @@ from tortoise import Model
 
 from OperationFrame.lib.depend import PageQuery
 from OperationFrame.utils.tools import get_model_query_field
-
-
-def is_file_changed(file_path: str) -> bool:
-    """
-    查看文件是否发生变化
-    """
-    current_stat = os.stat(file_path)
-    if current_stat.st_mtime != is_file_changed.previous_stat.st_mtime:
-        is_file_changed.previous_stat = current_stat
-        return True
-    return False
 
 
 def get_model_pagination(model: Type[Model], pq: PageQuery):

@@ -1,6 +1,8 @@
 # _*_ coding: utf-8 _*_
 """
 Author: 'LingLing'
-Date: 2023/04/07
+Date: 2023/03/21
 """
-from .core import get_cbv_router
+
+from .wrapper import api_route
+from .cbv import CBV

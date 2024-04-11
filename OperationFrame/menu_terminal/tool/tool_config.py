@@ -19,8 +19,11 @@ from OperationFrame.utils.log import logger
 class ToolConfigStatus(CommonCbv):
 
     async def run(self):
-        for k, v in config.config_property.items():
-            print(f"{k:<20} => {v}")
+        # for k, v in config.config_property.items():
+        #     print(f"{k:<20} => {v}")
+        status1 = 1
+        status2 = '1'
+        print(status1 + status2)
 
     class Meta:
         name = '工具 配置项状态'

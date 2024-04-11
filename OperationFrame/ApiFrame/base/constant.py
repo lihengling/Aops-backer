@@ -22,3 +22,6 @@ PERMISSION_INFO:                 str = 'get'
 PERMISSION_UPDATE:               str = 'update'
 PERMISSION_DELETE:               str = 'delete'
 PERMISSION_CREATE:               str = 'create'
+
+# key 密钥
+SECRET_KEY:                       str = 'k!Gp4{G?dJ^&Ww3RsP#iCnOz#(=7'

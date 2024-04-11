@@ -25,3 +25,5 @@ router_role:       APIRouter = APIRouter(prefix="/role", tags=["Role"], sort=ROU
 router_menu:       APIRouter = APIRouter(prefix="/menu", tags=["Menu"], sort=ROUTER_SORT_APP)
 router_department: APIRouter = APIRouter(prefix="/department", tags=["Department"], sort=ROUTER_SORT_APP)
 router_permission: APIRouter = APIRouter(prefix="/permission", tags=["Permission"], sort=ROUTER_SORT_APP)
+
+router_help:       APIRouter = APIRouter(prefix="/help", tags=["Help"], sort=ROUTER_SORT_APP)

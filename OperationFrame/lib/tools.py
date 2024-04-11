@@ -6,6 +6,8 @@ Date: 2022/07/21
 import os
 import re
 import hashlib
+import time
+
 import aiofiles
 
 from typing import Union
@@ -54,6 +56,21 @@ def md5_sha256_value(value: str, time: str) -> str:
     rud_key_sha256.update(rud_key_md5_pwd.encode())
     encrypt_value = rud_key_sha256.hexdigest()
     return encrypt_value
+
+
+def verify_key(sKey: str, rSign: str, rTime: str, time_out: int = 600) -> bool:
+    """
+    校验key
+    """
+    if not rTime.isdigit():
+        return False
+
+    if len(str(rTime)) > 10:
+        differ = int(time.time()) - int(int(rTime) / 1000)
+    else:
+        differ = int(time.time()) - int(rTime)
+
+    return differ < time_out and md5_sha256_value(rTime, sKey) == rSign
 
 
 def paginate_list(data_list: list, page_query: Union[PageQuery, dict]):
